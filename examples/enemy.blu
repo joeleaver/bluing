@@ -1,17 +1,17 @@
 // A small Bluing script. It is also valid Rust.
 
 struct Enemy {
-    name: String,
+    name: &'static str,
     hp: i32,
 }
 
 impl Enemy {
-    fn new(name: &str, hp: i32) -> Enemy {
-        Enemy { name: name.to_string(), hp }
+    fn new(name: &'static str, hp: i32) -> Enemy {
+        Enemy { name, hp }
     }
 
     fn name(&self) -> &str {
-        &self.name
+        self.name
     }
 
     fn take_hit(&mut self, dmg: i32) -> bool {

@@ -1,0 +1,26 @@
+// bluing: not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported
+// rustc: ok
+pub fn local_items() {
+    struct Local;
+    let _ = Local;
+}
+
+#[cfg(test)]
+fn only_in_tests() {}
+
+pub union Bits {
+    pub int: u32,
+    pub float: f32,
+}
+
+pub fn higher_ranked(_: for<'a> fn(&'a u8)) {}
+
+pub fn precise<'a>(x: &'a u8) -> impl Sized + use<'a> {
+    x
+}
+
+pub trait Lending {
+    type Item<'a>
+    where
+        Self: 'a;
+}

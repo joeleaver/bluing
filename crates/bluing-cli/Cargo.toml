@@ -12,4 +12,6 @@ name = "blu"
 path = "src/main.rs"
 
 [dependencies]
-bluing-syntax.workspace = true
+bluing-base.workspace = true
+bluing-hir.workspace = true
+bluing-std.workspace = true

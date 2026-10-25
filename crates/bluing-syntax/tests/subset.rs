@@ -1,7 +1,12 @@
-use bluing_syntax::{Code, Options, check};
+use bluing_base::{Code, FileId};
+use bluing_syntax::{Options, parse};
 
 fn codes(text: &str, options: &Options) -> Vec<Code> {
-    check(text, options).into_iter().map(|d| d.code).collect()
+    parse(FileId(0), text, options)
+        .diagnostics
+        .into_iter()
+        .map(|d| d.code)
+        .collect()
 }
 
 fn default_codes(text: &str) -> Vec<Code> {
@@ -46,12 +51,25 @@ fn every_form_of_unsafe_is_gated() {
         #[unsafe(no_mangle)] fn d() {}
         fn e() { vec![unsafe { 1 }]; }
     "#;
-    assert_eq!(default_codes(text), [Code::Unsafe; 6]);
+    // `no_mangle` is also outside the attribute allowlist.
+    let expected = [
+        Code::Unsafe,
+        Code::Unsafe,
+        Code::Unsafe,
+        Code::Unsafe,
+        Code::Attribute,
+        Code::Unsafe,
+        Code::Unsafe,
+    ];
+    assert_eq!(default_codes(text), expected);
 }
 
 #[test]
 fn unsafe_is_accepted_when_allowed() {
-    let options = Options { allow_unsafe: true };
+    let options = Options {
+        allow_unsafe: true,
+        ..Options::default()
+    };
     assert_eq!(codes("fn b() { unsafe {} }", &options), []);
 }
 
@@ -66,7 +84,10 @@ fn unsafe_in_strings_comments_and_raw_identifiers_is_not_flagged() {
 
 #[test]
 fn ffi_is_rejected_even_with_unsafe_allowed() {
-    let options = Options { allow_unsafe: true };
+    let options = Options {
+        allow_unsafe: true,
+        ..Options::default()
+    };
     let text = r#"
         unsafe extern "C" { fn puts(s: *const u8) -> i32; }
         extern "C" fn callback() {}
@@ -77,7 +98,10 @@ fn ffi_is_rejected_even_with_unsafe_allowed() {
 
 #[test]
 fn inline_asm_is_rejected() {
-    let options = Options { allow_unsafe: true };
+    let options = Options {
+        allow_unsafe: true,
+        ..Options::default()
+    };
     let text = r#"
         fn f() { unsafe { core::arch::asm!("nop") } }
         std::arch::global_asm!("");

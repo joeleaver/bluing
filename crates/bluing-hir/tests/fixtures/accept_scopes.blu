@@ -1,0 +1,62 @@
+// bluing: ok
+// rustc: ok
+// A struct named like a primitive shadows it.
+mod prim {
+    pub struct u8 {
+        pub x: i32,
+    }
+    pub fn f(v: u8) -> i32 {
+        v.x
+    }
+}
+
+// Generic parameters shadow items.
+pub struct T;
+pub fn shadowed<T>(x: T) -> T {
+    x
+}
+
+// `Self` in definitions, traits and impls.
+pub struct Node {
+    pub next: Option<&'static Self>,
+}
+pub enum Tree {
+    Leaf,
+    Branch(&'static Self),
+}
+
+pub trait Shape: Clone
+where
+    Self: Sized,
+{
+    type Unit;
+    fn unit(&self) -> Self::Unit;
+    fn same(&self) -> Self;
+}
+
+pub trait Convert<X> {}
+impl Convert<Self> for Tree {}
+impl Convert<i32> for Node where Self: Sized {}
+
+// Associated paths are left for type checking.
+pub fn assoc<S: Shape>(_: S::Unit, _: <S as Shape>::Unit) {}
+
+// Lifetimes.
+pub struct Holder<'a, 'b: 'a> {
+    pub first: &'a str,
+    pub second: &'b mut [u8],
+}
+impl<'a, 'b> Holder<'a, 'b> {
+    pub fn first(&self) -> &'a str {
+        self.first
+    }
+    pub fn anon(_: &'_ str) -> &'static str {
+        ""
+    }
+}
+
+// Const generics, including a constant passed as a bare name.
+pub struct Buffer<const N: usize>;
+pub const SIZE: usize = 4;
+pub fn sized(_: Buffer<SIZE>, _: Buffer<3>) {}
+pub fn generic<const N: usize>(_: Buffer<N>, _: [u8; N]) {}

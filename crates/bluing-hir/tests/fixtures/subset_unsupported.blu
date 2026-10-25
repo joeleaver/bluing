@@ -1,0 +1,6 @@
+// bluing: unsupported, attribute
+// rustc: ok
+extern crate std as standard;
+
+#[non_exhaustive]
+pub struct Open;

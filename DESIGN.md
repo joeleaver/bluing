@@ -43,7 +43,9 @@ Consequences:
 | `async fn`, `async` blocks and closures, async fn in traits | In |
 | `unsafe`, raw pointers, `MaybeUninit`, unions | Gated: per-package opt-in |
 | `macro_rules!` | Not yet |
-| Explicit `for<'a>` HRTBs beyond closure bounds, GATs, specialization | Out for now |
+| Const generics: `const N: usize` parameters and arguments | In |
+| Generic associated types | Not yet |
+| Explicit `for<'a>` HRTBs beyond closure bounds, specialization | Out for now |
 | Threads, `Send`/`Sync`, atomics | Out |
 | FFI (`extern`), inline assembly, `repr` beyond `C`/`transparent` | Out, permanently |
 | Proc macros, `build.rs`, crates.io dependencies | Out |
@@ -148,15 +150,135 @@ source ─ parse ─ name resolution ─ type check (with region variables) ─ 
 
 | Crate | Role |
 |---|---|
+| `bluing-base` | File ids, diagnostics and their codes, line/column mapping |
 | `bluing-syntax` | Parsing and subset checking |
+| `bluing-hir` | Module tree, item lowering (HIR) and name resolution |
+| `bluing-std` | Bluing's standard library sources, embedded in the compiler |
 | `bluing-cli` | The `blu` command |
+
+## Files, crates and the standard library
+
+- Source files use the `.blu` extension. `mod foo;` follows Rust's rules with
+  `.blu` in place of `.rs`: from a crate root or `mod.blu` file it loads
+  `foo.blu` or `foo/mod.blu`; from `bar.blu` it loads `bar/foo.blu` or
+  `bar/foo/mod.blu`. Finding both is an error, as in rustc. The extension is
+  packaging, not meaning: the rustc oracle copies a crate to `.rs` files and
+  compiles it unchanged.
+- The compiler reads files through a `SourceProvider` trait, so the browser
+  host supplies them from memory and the desktop host from disk.
+- A script package is one crate. Its only dependency is `std`, which is the
+  only name in the extern prelude. Paths through `core::` or `alloc::` are not
+  supported yet; they will become re-export crates of `std`.
+- `std` is written in Bluing and compiled from embedded source in **library
+  mode**: `unsafe` is allowed, `#[lang = "..."]` attributes mark the items the
+  compiler must know about (`Sized`, `Copy`, `Option`, ...), and there is no
+  implicit prelude. This mirrors how Rust's own standard library is built with
+  unstable features its users cannot use.
+- `std`'s module paths mirror Rust's exactly (`std::option::Option`,
+  `std::marker::Copy`, `std::prelude::rust_2024`), so the same script compiles
+  against both, and the rustc oracle can test paths into `std`.
+- `std` only contains complete, real definitions. Types that need machinery
+  from later milestones (`String`, `Vec`, `Box` need generics checking, the
+  allocator and `unsafe` codegen) arrive with that machinery, and until then
+  scripts and examples cannot name them.
+
+## Name resolution
+
+Name resolution follows rustc's 2024-edition behavior.
+
+- **Namespaces.** Types (modules, structs, enums, unions, traits, type aliases,
+  enum variants) and values (functions, constants, statics, tuple and unit
+  struct constructors, tuple and unit variants). Macros only exist as
+  compiler built-ins for now.
+- **Unqualified names** are looked up in this order: generic parameters of the
+  enclosing items (innermost first), `Self`, the module's items and explicit
+  imports, its glob imports, the extern prelude (`std`), the standard prelude
+  (`std::prelude::rust_2024`), and finally primitive types. An item named like
+  a primitive (`struct u8;`) shadows the primitive.
+- **Imports** (`use`) are resolved to a fixed point. A lookup is only trusted
+  once it is *determinate*: it is undetermined while the module still has an
+  unresolved single import that could bind the name, or a glob import whose
+  source module could still gain names. When no import makes progress, the
+  remaining ones are reported as errors.
+- **Glob imports** have lower priority than items and explicit imports. Two
+  globs providing the same name for different definitions is an error only
+  where the name is used.
+- **Duplicate definitions** of a name in one namespace of a module, and
+  explicit imports that collide with items or with each other, are errors.
+- **Uniform paths.** The first segment of a `use` path is looked up through
+  the same scopes as any other path, so `use Option::Some;` and
+  `use u8 as Byte;` work. Items and explicit imports shadow the outer scopes
+  (extern prelude, standard prelude, primitives). A name that only a glob
+  import provides is ambiguous in a `use` path if an outer scope also has it;
+  in other paths the glob shadows the outer scope. A leading `::` means an
+  extern crate. (Each rule here was checked against rustc 1.98.)
+- **Visibility.** `pub`, `pub(crate)`, `pub(super)`, `pub(self)` and
+  `pub(in path)` (an ancestor module); private means visible in the defining
+  module and its descendants. Every path segment after the first must be
+  visible from where the path is written. A single import may not re-export
+  a name more widely than the name itself is visible; a glob import re-exports
+  each name at the narrower of the two visibilities.
+- **Associated paths** such as `T::Item`, `Self::Output` or `<T as Trait>::X`
+  are resolved as far as the module system can go; the rest is left as a
+  partial resolution for type checking.
+
+## Milestone 2 scope
+
+Milestone 2 lowers every item to HIR and resolves every path in item
+signatures: field types, function parameters and return types, `impl` headers,
+trait references, bounds, `where` clauses, type aliases, and the types of
+constants and statics. Lifetimes in signatures resolve to declared parameters,
+`'static`, or `'_`. It also reports what Rust rejects at the level of names:
+unresolved, private and ambiguous names, duplicate definitions (items,
+imports, variants, fields, associated items, generic parameters, including
+ones that shadow the enclosing trait's or impl's), invalid visibilities and
+re-exports, paths of the wrong kind (a struct used as a trait, a variant or
+module used as a type, a trait used as a type without `dyn`), and items that
+need a body but have none.
+
+Function bodies and initializer expressions are kept as syntax pointers and
+resolved in milestone 3. So are the signature checks that need the meaning of
+types rather than just names: generic argument counts, lifetime elision rules
+(for example a reference without a lifetime in a struct field), where
+`impl Trait` and `_` may appear, and whether a trait can be used as `dyn`.
+
+Constructs the compiler does not handle yet produce an explicit "not supported
+yet" error instead of being skipped:
+
+- items inside function bodies and other blocks
+- `#[cfg]`, `#[cfg_attr]` and `#[path]`
+- macro calls in item position
+- unions
+- generic associated types
+- explicit `for<'a>` binders and `use<..>` bounds
+
+Attributes follow an allowlist: inert attributes (`allow`, `warn`, `deny`,
+`forbid`, `expect`, `doc`, `inline`, `cold`, `must_use`, `deprecated`, and
+`rustfmt::` / `clippy::` tool attributes), the built-in derives, and
+`repr(C)` / `repr(transparent)`. Anything else is an error, so an attribute is
+never silently ignored.
+
+## Testing
+
+- **The rustc oracle.** Each file in `crates/bluing-hir/tests/fixtures` is a
+  small crate (one or more files) with a header stating which diagnostics
+  Bluing must report and whether rustc accepts it. The test runs both
+  compilers on every fixture. It also enforces the subset rule directly: a
+  fixture Bluing accepts and rustc rejects fails, whatever its header says.
+  Fixtures named `subset_*` cover valid Rust that Bluing reports as
+  unsupported.
+- **Resolution targets.** `tests/resolutions.rs` checks what names resolve
+  to, not only that they resolve.
+- Behavior that rustc decides was checked against rustc 1.98 while writing
+  the resolver; when in doubt, add a fixture rather than reasoning about it.
 
 ## Roadmap
 
 1. **Syntax and subset checking.** *(done)* `blu check` parses and enforces
    the subset rules.
-2. **Name resolution and HIR** for structs, enums, functions, `impl`s and
-   modules.
+2. **Name resolution and HIR.** *(done)* All items and their signatures, the
+   module tree, imports and visibility, and the start of `std`. See
+   "Milestone 2 scope".
 3. **Type checking** of non-generic code, then generics and traits.
 4. **MIR and wasm codegen** for integer and struct code; first runnable
    scripts, verified against rustc.

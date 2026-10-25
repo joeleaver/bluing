@@ -1,0 +1,9 @@
+[package]
+name = "bluing-std"
+description = "The Bluing standard library's sources, embedded for the compiler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+include = ["build.rs", "src/**", "library/**"]

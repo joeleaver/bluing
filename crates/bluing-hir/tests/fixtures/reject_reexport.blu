@@ -1,0 +1,10 @@
+// bluing: visibility, visibility
+// rustc: error
+mod m {
+    fn private() {}
+    pub use self::private as exposed;
+}
+mod n {
+    pub(crate) struct Internal;
+}
+pub use n::Internal;

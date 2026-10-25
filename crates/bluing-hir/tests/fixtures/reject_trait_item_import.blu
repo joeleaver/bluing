@@ -1,0 +1,6 @@
+// bluing: unsupported
+// rustc: error
+pub trait T {
+    fn m();
+}
+use T::m;

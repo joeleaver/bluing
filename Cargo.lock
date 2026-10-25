@@ -9,16 +9,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "bluing-base"
+version = "0.1.0"
+dependencies = [
+ "text-size",
+]
+
+[[package]]
 name = "bluing-cli"
 version = "0.1.0"
 dependencies = [
- "bluing-syntax",
+ "bluing-base",
+ "bluing-hir",
+ "bluing-std",
 ]
+
+[[package]]
+name = "bluing-hir"
+version = "0.1.0"
+dependencies = [
+ "bluing-base",
+ "bluing-std",
+ "bluing-syntax",
+ "la-arena",
+]
+
+[[package]]
+name = "bluing-std"
+version = "0.1.0"
 
 [[package]]
 name = "bluing-syntax"
 version = "0.1.0"
 dependencies = [
+ "bluing-base",
  "ra_ap_syntax",
  "unicode-ident",
 ]
@@ -98,6 +122,12 @@ name = "jod-thread"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a037eddb7d28de1d0fc42411f501b53b75838d313908078d6698d064f3029b24"
+
+[[package]]
+name = "la-arena"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3752f229dcc5a481d60f385fa479ff46818033d881d2d801aa27dffcfb5e8306"
 
 [[package]]
 name = "libc"

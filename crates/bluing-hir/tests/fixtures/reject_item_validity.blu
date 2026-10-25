@@ -1,0 +1,6 @@
+// bluing: syntax, syntax, syntax, syntax
+// rustc: error
+fn no_body();
+const NO_VALUE: i32;
+type NoType;
+fn free(self) {}

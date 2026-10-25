@@ -1,0 +1,11 @@
+//! Traits describing basic properties of types.
+
+use crate::clone::Clone;
+
+/// Types with a size known at compile time.
+#[lang = "sized"]
+pub trait Sized {}
+
+/// Types whose values can be duplicated by copying their bits.
+#[lang = "copy"]
+pub trait Copy: Clone {}

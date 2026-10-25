@@ -1,0 +1,9 @@
+//! Error handling with the `Result` type.
+
+/// Either success (`Ok`) or failure (`Err`).
+pub enum Result<T, E> {
+    /// A success value.
+    Ok(T),
+    /// An error value.
+    Err(E),
+}

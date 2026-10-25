@@ -1,0 +1,70 @@
+// bluing: ok
+// rustc: ok
+pub struct Point<T> {
+    pub x: T,
+    y: T,
+}
+
+pub struct Unit;
+pub struct Pair(pub i32, u8);
+
+pub enum Shape<'a, T: Clone> {
+    Circle { radius: f64 },
+    Label(&'a str),
+    Wrapped(Option<T>),
+    Empty,
+}
+
+pub trait Area {
+    type Output;
+    const SIDES: u32;
+    fn area(&self) -> Self::Output;
+    fn describe(&self) -> &'static str {
+        "shape"
+    }
+}
+
+impl<T: Copy> Point<T> {
+    pub fn new(x: T, y: T) -> Self {
+        Point { x, y }
+    }
+    pub fn x(&self) -> &T {
+        &self.x
+    }
+}
+
+impl Area for Unit {
+    type Output = f64;
+    const SIDES: u32 = 0;
+    fn area(&self) -> f64 {
+        0.0
+    }
+}
+
+pub type Grid<T> = [[T; 3]; 3];
+pub const ORIGIN: Point<i32> = Point { x: 0, y: 0 };
+pub static mut COUNTER: u64 = 0;
+const _: () = ();
+
+pub fn largest<'a, T>(items: &'a [T]) -> Option<&'a T>
+where
+    T: Clone,
+{
+    items.first()
+}
+
+pub fn pointer(f: fn(&str) -> usize) -> usize {
+    f("x")
+}
+
+pub trait Draw {
+    fn draw(&self);
+}
+
+impl Draw for Unit {
+    fn draw(&self) {}
+}
+
+pub fn boxed(_: &dyn Draw) -> impl Area<Output = f64> + Draw {
+    Unit
+}

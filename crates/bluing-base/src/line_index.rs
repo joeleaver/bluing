@@ -1,4 +1,4 @@
-use ra_ap_syntax::TextSize;
+use text_size::TextSize;
 
 /// A 1-based line and column. Columns count characters, not bytes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

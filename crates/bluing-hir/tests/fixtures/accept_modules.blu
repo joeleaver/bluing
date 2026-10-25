@@ -1,0 +1,17 @@
+// bluing: ok
+// rustc: ok
+//- main.blu
+mod net;
+mod gfx;
+
+pub fn f(_: net::Socket, _: net::tcp::Stream, _: gfx::Canvas) {}
+//- net.blu
+pub mod tcp;
+pub struct Socket;
+//- net/tcp.blu
+pub struct Stream(pub super::Socket);
+//- gfx/mod.blu
+mod paint;
+pub use paint::Canvas;
+//- gfx/paint.blu
+pub struct Canvas;

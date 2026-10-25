@@ -1,0 +1,21 @@
+// bluing: ambiguous, ambiguous
+// rustc: error
+mod a {
+    pub struct X;
+    pub enum Option {
+        V,
+    }
+}
+mod b {
+    pub struct X;
+}
+mod uses {
+    use crate::a::*;
+    use crate::b::*;
+    pub fn f(_: X) {}
+}
+// In a `use` path, a glob does not shadow the prelude.
+mod prelude {
+    use crate::a::*;
+    use Option::V;
+}

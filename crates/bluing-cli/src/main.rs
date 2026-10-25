@@ -1,11 +1,14 @@
 //! `blu`, the Bluing command-line tool.
 
-use std::{fs, process::ExitCode};
+use std::{fs, path::Path, process::ExitCode};
 
-use bluing_syntax::{LineIndex, Options};
+use bluing_base::LineIndex;
+use bluing_hir::{
+    CrateData, CrateGraph, CrateKind, Layered, MemoryProvider, Name, SourceProvider, VfsPath,
+};
 
 const USAGE: &str = "\
-usage: blu check [--allow-unsafe] <file.blu>...
+usage: blu check [--allow-unsafe] <main.blu>
        blu --version";
 
 fn main() -> ExitCode {
@@ -20,53 +23,96 @@ fn main() -> ExitCode {
             println!("{USAGE}");
             ExitCode::SUCCESS
         }
-        _ => {
-            eprintln!("{USAGE}");
-            ExitCode::from(2)
-        }
+        _ => usage_error(),
     }
 }
 
+fn usage_error() -> ExitCode {
+    eprintln!("{USAGE}");
+    ExitCode::from(2)
+}
+
+/// Checks the script crate rooted at the given file.
 fn check(args: &[String]) -> ExitCode {
-    let mut options = Options::default();
-    let mut paths = Vec::new();
+    let mut allow_unsafe = false;
+    let mut roots = Vec::new();
     for arg in args {
         match arg.as_str() {
-            "--allow-unsafe" => options.allow_unsafe = true,
+            "--allow-unsafe" => allow_unsafe = true,
             flag if flag.starts_with('-') => {
-                eprintln!("blu: unknown option `{flag}`\n{USAGE}");
-                return ExitCode::from(2);
+                eprintln!("blu: unknown option `{flag}`");
+                return usage_error();
             }
-            path => paths.push(path),
+            path => roots.push(path),
         }
     }
-    if paths.is_empty() {
-        eprintln!("{USAGE}");
-        return ExitCode::from(2);
-    }
+    let [root] = roots[..] else {
+        return usage_error();
+    };
+    let root = match std::path::absolute(root) {
+        Ok(path) => vfs_path(&path),
+        Err(err) => {
+            eprintln!("blu: cannot use {root}: {err}");
+            return ExitCode::from(2);
+        }
+    };
 
-    let mut errors = 0;
-    for path in paths {
-        let text = match fs::read_to_string(path) {
-            Ok(text) => text,
-            Err(err) => {
-                eprintln!("blu: cannot read {path}: {err}");
-                return ExitCode::from(2);
-            }
-        };
-        let index = LineIndex::new(&text);
-        for diagnostic in bluing_syntax::check(&text, &options) {
-            let pos = index.line_col(diagnostic.range.start());
-            eprintln!(
-                "{path}:{}:{}: error[{}]: {}",
-                pos.line, pos.col, diagnostic.code, diagnostic.message
-            );
-            errors += 1;
-        }
+    let mut std_files = MemoryProvider::new();
+    for (path, text) in bluing_std::files() {
+        std_files.insert(VfsPath::new(format!("{}/{path}", bluing_std::DIR)), *text);
     }
-    if errors == 0 {
+    let provider = Layered(vec![&std_files, &Disk]);
+    let mut graph = CrateGraph::new();
+    let std = graph.add(CrateData {
+        name: Name::new("std"),
+        root: VfsPath::new(bluing_std::ROOT),
+        kind: CrateKind::Library,
+        deps: Vec::new(),
+    });
+    graph.add(CrateData {
+        name: Name::new("script"),
+        root,
+        kind: CrateKind::Script { allow_unsafe },
+        deps: vec![std],
+    });
+
+    let analysis = match bluing_hir::analyze(&graph, &provider) {
+        Ok(analysis) => analysis,
+        Err(missing) => {
+            eprintln!("blu: cannot read {}", missing.0);
+            return ExitCode::from(2);
+        }
+    };
+    let cwd = std::env::current_dir().ok().map(|dir| vfs_path(&dir));
+    for diagnostic in &analysis.diagnostics {
+        let file = analysis.files.get(diagnostic.file);
+        let pos = LineIndex::new(&file.text).line_col(diagnostic.range.start());
+        let shown = cwd
+            .as_ref()
+            .and_then(|cwd| file.path.as_str().strip_prefix(&format!("{cwd}/")))
+            .unwrap_or(file.path.as_str());
+        eprintln!(
+            "{shown}:{}:{}: error[{}]: {}",
+            pos.line, pos.col, diagnostic.code, diagnostic.message
+        );
+    }
+    if analysis.diagnostics.is_empty() {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
+    }
+}
+
+/// An OS path as a `/`-separated virtual path.
+fn vfs_path(path: &Path) -> VfsPath {
+    VfsPath::new(path.to_string_lossy().replace('\\', "/"))
+}
+
+/// Reads script files from disk.
+struct Disk;
+
+impl SourceProvider for Disk {
+    fn read(&self, path: &VfsPath) -> Option<String> {
+        fs::read_to_string(path.as_str()).ok()
     }
 }

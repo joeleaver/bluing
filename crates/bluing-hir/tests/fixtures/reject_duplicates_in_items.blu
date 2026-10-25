@@ -1,0 +1,26 @@
+// bluing: duplicate, duplicate, duplicate, duplicate, duplicate, duplicate, duplicate
+// rustc: error
+pub enum E {
+    A,
+    A,
+}
+pub struct S {
+    pub x: i32,
+    pub x: u8,
+}
+pub trait T {
+    type Out;
+    type Out;
+    fn m();
+    const m: i32;
+}
+pub struct G<X, X>(X);
+impl<Y> T for G<Y, Y> {
+    type Out = ();
+    fn m() {}
+    const m: i32 = 0;
+}
+pub struct L<'a>(&'a u8);
+impl<'a> L<'a> {
+    pub fn f<'a>(_: &'a u8) {}
+}

@@ -1,0 +1,5 @@
+// bluing: syntax, syntax
+// rustc: error
+pub enum E {
+    pub A,
+}

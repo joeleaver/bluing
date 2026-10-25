@@ -1,0 +1,86 @@
+// bluing: ok
+// rustc: ok
+mod shapes {
+    pub mod round {
+        pub struct Circle;
+        pub fn area() {}
+    }
+    pub struct Square;
+    pub use self::round::Circle;
+    pub(crate) use self::round::area as round_area;
+}
+
+use shapes::{round::{self, Circle as Ring}, Square};
+use shapes::round_area;
+use self::shapes::Circle;
+
+pub fn take(_: Ring, _: Square, _: round::Circle, _: Circle) {}
+
+// Glob imports, including a cycle and a chain.
+mod a {
+    pub use crate::b::*;
+    pub struct A;
+}
+mod b {
+    pub use crate::a::*;
+    pub struct B;
+}
+mod c {
+    pub use crate::d::*;
+}
+mod d {
+    pub use crate::e::*;
+}
+mod e {
+    pub struct Deep;
+}
+use a::B;
+use b::A;
+use c::Deep;
+
+pub fn globs(_: A, _: B, _: Deep) {}
+
+// An explicit import shadows a glob.
+mod first {
+    pub struct X;
+}
+mod second {
+    pub struct X;
+}
+mod shadow {
+    use crate::first::*;
+    use crate::second::X;
+    pub fn f(_: X) {}
+}
+
+// Two globs with the same name are fine while the name is unused.
+mod unused {
+    use crate::first::*;
+    use crate::second::*;
+}
+
+// A glob shadows the standard prelude outside `use` paths.
+mod prelude_shadow {
+    mod inner {
+        pub struct Option;
+    }
+    use self::inner::*;
+    pub fn f(_: Option) {}
+}
+
+// `use Trait as _` and enum globs.
+mod traits {
+    pub trait Speak {}
+    pub enum Color {
+        Red,
+        Green(u8),
+    }
+}
+use traits::Speak as _;
+use traits::Color::*;
+
+pub fn colors(_: traits::Color) {}
+
+// Importing a module itself.
+use crate as root;
+pub fn rooted(_: root::shapes::Square) {}

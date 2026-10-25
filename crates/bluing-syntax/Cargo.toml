@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+bluing-base.workspace = true
 ra_ap_syntax.workspace = true
 # ra-ap-rustc_lexer refuses to compile unless unicode-ident and
 # unicode-properties carry the same Unicode version. unicode-properties 0.1.4

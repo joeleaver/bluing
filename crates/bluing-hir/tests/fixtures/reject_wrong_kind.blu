@@ -1,0 +1,13 @@
+// bluing: wrong-kind, wrong-kind, wrong-kind, wrong-kind, wrong-kind
+// rustc: error
+pub enum E {
+    A,
+}
+pub struct S;
+pub trait T {}
+mod m {}
+pub fn variant_as_type(_: E::A) {}
+pub fn bare_trait(_: &T) {}
+pub fn struct_as_bound<X: S>(_: X) {}
+pub fn module_as_type(_: m) {}
+pub fn const_param_as_type<const N: usize>(_: N) {}

@@ -1,0 +1,31 @@
+// bluing: ok
+// rustc: ok
+pub mod outer {
+    pub mod inner {
+        pub(crate) struct CrateWide;
+        pub(super) struct ParentOnly;
+        pub(in crate::outer) struct OuterOnly;
+        pub(self) struct SelfOnly;
+        pub struct Fields {
+            pub public: i32,
+            pub(crate) internal: i32,
+            private: i32,
+        }
+        pub fn own(_: SelfOnly) {}
+    }
+    pub fn uses(_: inner::ParentOnly, _: inner::OuterOnly) {}
+
+    // A child module can see private items of its ancestors.
+    struct Hidden;
+    mod child {
+        pub fn sees(_: super::Hidden) {}
+    }
+}
+
+pub fn crate_level(_: outer::inner::CrateWide, _: outer::inner::Fields) {}
+
+// A glob re-export only re-exports at the narrower visibility.
+mod narrow {
+    pub(crate) struct X;
+}
+pub use narrow::*;

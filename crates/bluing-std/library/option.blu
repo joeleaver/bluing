@@ -1,0 +1,12 @@
+//! Optional values.
+
+/// Either some value of type `T`, or none.
+#[lang = "Option"]
+pub enum Option<T> {
+    /// No value.
+    #[lang = "None"]
+    None,
+    /// Some value of type `T`.
+    #[lang = "Some"]
+    Some(T),
+}

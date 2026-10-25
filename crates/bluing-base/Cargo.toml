@@ -1,0 +1,11 @@
+[package]
+name = "bluing-base"
+description = "Shared foundations of the Bluing compiler: file ids, diagnostics, positions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+text-size.workspace = true

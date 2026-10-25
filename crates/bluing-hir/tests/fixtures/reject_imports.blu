@@ -1,0 +1,7 @@
+// bluing: unresolved, unresolved
+// rustc: error
+mod m {
+    pub struct X;
+}
+use m::Y;
+use nowhere::Z;

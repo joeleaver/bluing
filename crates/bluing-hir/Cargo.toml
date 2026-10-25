@@ -1,0 +1,16 @@
+[package]
+name = "bluing-hir"
+description = "Module tree, HIR and name resolution for the Bluing scripting language"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bluing-base.workspace = true
+bluing-syntax.workspace = true
+la-arena.workspace = true
+
+[dev-dependencies]
+bluing-std.workspace = true

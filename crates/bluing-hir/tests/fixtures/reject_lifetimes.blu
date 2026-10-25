@@ -1,0 +1,6 @@
+// bluing: undeclared-lifetime, undeclared-lifetime
+// rustc: error
+pub struct S {
+    pub r: &'a str,
+}
+pub fn f(_: &'b u8) {}

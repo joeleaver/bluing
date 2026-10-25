@@ -1,0 +1,7 @@
+// bluing: unresolved, unresolved
+// rustc: ok
+// `String` and `Vec` arrive in Bluing's `std` with the machinery they need.
+pub struct Named {
+    pub name: String,
+    pub tags: Vec<u8>,
+}

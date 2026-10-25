@@ -15,9 +15,10 @@ or LLVM.
 
 ## Status
 
-Early. Today `blu check` parses `.blu` files and enforces the subset rules.
-Type checking, borrow checking and code generation are next; see
-[DESIGN.md](DESIGN.md) for the plan.
+Early. Today `blu check` loads a script and its module files, enforces the
+subset rules, and resolves every name in item signatures: modules, imports,
+visibility and paths, checked against rustc. Type checking, borrow checking
+and code generation are next; see [DESIGN.md](DESIGN.md) for the plan.
 
 ```bash
 cargo run -p bluing-cli -- check examples/enemy.blu

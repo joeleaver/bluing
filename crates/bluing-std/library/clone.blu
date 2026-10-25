@@ -1,0 +1,10 @@
+//! Explicit duplication of values.
+
+use crate::marker::Sized;
+
+/// The ability to explicitly duplicate a value.
+#[lang = "clone"]
+pub trait Clone: Sized {
+    /// Returns a duplicate of the value.
+    fn clone(&self) -> Self;
+}

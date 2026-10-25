@@ -16,7 +16,8 @@ decisions and the roadmap; update it when a decision changes.
   that means the same thing. When unsure what Bluing should do, rustc's
   behavior (stable, NLL) is the answer; for `unsafe` code, Miri's.
 - Behavior changes come with tests. Language behavior is tested against rustc
-  where possible.
+  where possible: add a fixture to `crates/bluing-hir/tests/fixtures` (see
+  "Testing" in DESIGN.md) rather than guessing what rustc does.
 
 ## Checks
 
@@ -26,5 +27,5 @@ CI runs these; run them before committing:
 cargo fmt --all --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
-cargo build -p bluing-syntax --target wasm32-unknown-unknown --locked
+cargo build -p bluing-syntax -p bluing-hir -p bluing-std --target wasm32-unknown-unknown --locked
 ```

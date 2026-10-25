@@ -1,0 +1,20 @@
+// bluing: visibility, syntax, visibility, visibility, visibility, syntax
+// rustc: error
+pub trait T {
+    pub fn m();
+}
+pub struct S;
+impl T for S {
+    pub fn m() {}
+}
+pub struct U;
+#[allow(unused)]
+impl T for U {
+    pub fn m() {}
+}
+mod a {
+    pub(in a) struct Relative;
+    pub mod b {}
+    pub(in crate::a::b) struct NotAncestor;
+    pub(b) struct NoIn;
+}

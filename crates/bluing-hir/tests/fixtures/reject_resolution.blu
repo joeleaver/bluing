@@ -1,0 +1,7 @@
+// bluing: unresolved, unresolved, unresolved, unresolved
+// rustc: error
+pub fn missing_type(_: Missing) {}
+pub fn missing_in_module(_: inner::Nope) {}
+pub fn self_outside(_: Self) {}
+pub fn bad_super(_: super::X) {}
+mod inner {}

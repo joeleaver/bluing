@@ -12,3 +12,8 @@ repository = "https://github.com/joeleaver/bluing"
 [workspace.dependencies]
 bluing-syntax = { path = "crates/bluing-syntax" }
 ra_ap_syntax = "=0.0.359"
+text-size = "1.1.1"
+la-arena = "0.3.1"
+bluing-base = { path = "crates/bluing-base" }
+bluing-hir = { path = "crates/bluing-hir" }
+bluing-std = { path = "crates/bluing-std" }

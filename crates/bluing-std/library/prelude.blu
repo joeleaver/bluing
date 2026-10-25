@@ -1,0 +1,9 @@
+//! The names every script can use without importing them.
+
+/// The prelude of the 2024 edition.
+pub mod rust_2024 {
+    pub use crate::clone::Clone;
+    pub use crate::marker::{Copy, Sized};
+    pub use crate::option::Option::{self, None, Some};
+    pub use crate::result::Result::{self, Err, Ok};
+}

@@ -1,0 +1,16 @@
+// bluing: ok
+// rustc: ok
+use std::marker::Copy as MarkerCopy;
+use std::option::Option::{None as Nothing, Some};
+use ::std::result::Result;
+
+pub fn first<T: Clone + Copy + Sized>(value: Option<T>) -> Result<T, ()> {
+    match value {
+        Some(v) => Ok(v),
+        Nothing => Err(()),
+    }
+}
+
+pub fn marker<T: MarkerCopy>(_: std::option::Option<T>) {}
+
+pub fn maybe_sized<T: ?Sized>(_: &T) {}

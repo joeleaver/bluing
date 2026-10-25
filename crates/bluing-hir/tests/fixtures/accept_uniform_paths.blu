@@ -1,0 +1,18 @@
+// bluing: ok
+// rustc: ok
+use Option::Some as Just;
+use u8 as Byte;
+
+pub fn f(x: Byte) -> Option<Byte> {
+    Just(x)
+}
+
+// A local `std` module shadows the extern crate.
+mod std {
+    pub mod fmt {
+        pub struct Mine;
+    }
+}
+use std::fmt::Mine;
+
+pub fn g(_: Mine) {}

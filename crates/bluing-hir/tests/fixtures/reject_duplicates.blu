@@ -1,0 +1,12 @@
+// bluing: duplicate, duplicate, duplicate, duplicate
+// rustc: error
+mod m {
+    pub struct X;
+}
+struct A;
+struct A;
+fn f() {}
+fn f() {}
+use m::X;
+use m::X;
+struct X;

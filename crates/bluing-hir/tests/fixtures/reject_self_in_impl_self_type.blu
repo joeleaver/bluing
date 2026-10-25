@@ -1,0 +1,4 @@
+// bluing: unresolved
+// rustc: error
+pub struct S<X>(X);
+impl S<Self> {}

@@ -1,0 +1,9 @@
+// bluing: module-file, module-file
+// rustc: error
+//- main.blu
+mod missing;
+mod both;
+//- both.blu
+pub struct X;
+//- both/mod.blu
+pub struct Y;

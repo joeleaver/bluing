@@ -1,0 +1,17 @@
+// bluing: private, private, unresolved
+// rustc: error
+mod a {
+    struct Hidden;
+    mod b {
+        pub struct Inner;
+    }
+}
+use a::Hidden;
+pub fn f(_: a::b::Inner) {}
+
+// A glob only imports what the importing module can see.
+mod c {
+    struct Secret;
+}
+use c::*;
+pub fn g(_: Secret) {}

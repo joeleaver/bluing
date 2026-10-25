@@ -1,0 +1,11 @@
+//! Bluing's standard library.
+//!
+//! Module paths mirror Rust's `std`, so a script compiles the same against
+//! both. Only complete, real definitions live here; see DESIGN.md, "Files,
+//! crates and the standard library".
+
+pub mod clone;
+pub mod marker;
+pub mod option;
+pub mod prelude;
+pub mod result;
