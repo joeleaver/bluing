@@ -93,6 +93,37 @@ across an `.await` move into the future's state, borrows held across an
 future drops exactly the live state. Wasm stack switching was rejected
 because it gives fibers, not Rust's lazy, poll-based, cancel-by-drop futures.
 
+## Hosts: browser and native desktop
+
+Bluing runs in two kinds of host: the browser and native desktop apps.
+**Both run the same wasm.** There is one compiler and one backend, and wasm is
+its only output format.
+
+| | Browser | Native desktop |
+|---|---|---|
+| Compiler | `bluing` library built for wasm32, run in a web worker | The same library, built natively and linked into the app |
+| Runs scripts with | The browser's own wasm engine (`WebAssembly.instantiate`) | An embedded wasm runtime: **wasmtime** (Cranelift JIT) by default, **wasmi** (interpreter) where JIT is unavailable or binary size matters |
+| Host API | JS glue generated from the host binding description | Rust host functions registered with the runtime |
+
+Why one output format instead of a native backend as well:
+
+- **Same semantics everywhere.** A script can't behave differently on desktop
+  and in the browser, which matters for determinism and collaboration.
+- **One backend to write and test.** A second backend (native code through
+  Cranelift, or a bytecode VM) would double the codegen and conformance work.
+- **The sandbox comes for free on desktop too.** wasmtime provides fuel limits,
+  memory caps and capability-scoped imports, the same isolation as the browser.
+- **Platforms without JIT** (for example iOS) use wasmi, which runs the same
+  modules more slowly.
+
+Requirements this puts on the runtime: NaN canonicalization on (wasmtime has a
+setting for it) so float results match across hosts, and async host calls
+(wasmtime supports them) so the engine's executor works the same way natively.
+
+A native release build through rustc stays available as an option, since
+scripts are valid Rust, but the normal path on every host is compile to wasm
+and run it.
+
 ## Pipeline
 
 ```
@@ -134,5 +165,6 @@ source ─ parse ─ name resolution ─ type check (with region variables) ─ 
    `Box`, `Rc`, `RefCell`, iterators.
 7. **Closures, `dyn Trait`, `impl Trait`.**
 8. **Async**: state-machine lowering and the host executor interface.
-9. **Host embedding**: a derive macro for host bindings, the browser build
-   of the compiler, hot reload.
+9. **Host embedding**: a derive macro for host bindings, hot reload, and the
+   two hosts: the browser (compiler in a web worker) and native desktop
+   (compiler linked in, scripts run on wasmtime or wasmi).
