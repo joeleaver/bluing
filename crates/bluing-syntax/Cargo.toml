@@ -1,0 +1,16 @@
+[package]
+name = "bluing-syntax"
+description = "Parsing and subset checking for the Bluing scripting language"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ra_ap_syntax.workspace = true
+# ra-ap-rustc_lexer refuses to compile unless unicode-ident and
+# unicode-properties carry the same Unicode version. unicode-properties 0.1.4
+# is Unicode 17; unicode-ident 1.0.25+ moved past it. Remove this pin once a
+# matching unicode-properties release exists.
+unicode-ident = "=1.0.24"

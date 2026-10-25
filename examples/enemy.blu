@@ -1,0 +1,30 @@
+// A small Bluing script. It is also valid Rust.
+
+struct Enemy {
+    name: String,
+    hp: i32,
+}
+
+impl Enemy {
+    fn new(name: &str, hp: i32) -> Enemy {
+        Enemy { name: name.to_string(), hp }
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn take_hit(&mut self, dmg: i32) -> bool {
+        self.hp -= dmg;
+        self.hp <= 0
+    }
+}
+
+fn main() {
+    let mut enemies = vec![Enemy::new("slime", 3), Enemy::new("bat", 1)];
+    for enemy in &mut enemies {
+        if enemy.take_hit(2) {
+            println!("{} is defeated", enemy.name());
+        }
+    }
+}
