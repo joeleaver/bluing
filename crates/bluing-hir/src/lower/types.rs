@@ -9,7 +9,7 @@ use bluing_syntax::ra_ap_syntax::{
 use crate::hir::{
     AssocBinding, AssocBindingValue, ConstExprPtr, GenericArg, GenericArgs, GenericParam,
     GenericParamKind, GenericParams, InFile, LifetimeRef, Path, PathKind, PathSegment,
-    QualifiedSelf, TypeBound, TypeRef, WherePredicate,
+    QualifiedSelf, TypeBound, TypeRef, TypeRefKind, WherePredicate,
 };
 use crate::{LifetimeId, Name, PathId};
 
@@ -44,35 +44,36 @@ impl TypeLowerer<'_> {
 
     pub fn ty_opt(&mut self, ty: Option<ast::Type>) -> TypeRef {
         // A missing type is a syntax error the parser already reported.
-        ty.map_or(TypeRef::Error, |ty| self.ty(&ty))
+        ty.map_or(TypeRef::error(TextRange::default()), |ty| self.ty(&ty))
     }
 
     pub fn ty(&mut self, ty: &ast::Type) -> TypeRef {
-        match ty {
-            ast::Type::PathType(ty) => match ty.path() {
-                Some(path) => self.path(&path).map_or(TypeRef::Error, TypeRef::Path),
-                None => TypeRef::Error,
+        let range = Self::range(ty);
+        let kind = match ty {
+            ast::Type::PathType(ty) => match ty.path().and_then(|path| self.path(&path)) {
+                Some(path) => TypeRefKind::Path(path),
+                None => TypeRefKind::Error,
             },
-            ast::Type::RefType(ty) => TypeRef::Reference {
+            ast::Type::RefType(ty) => TypeRefKind::Reference {
                 lifetime: ty.lifetime().map(|lt| self.lifetime(&lt)),
                 mutable: ty.mut_token().is_some(),
                 inner: Box::new(self.ty_opt(ty.ty())),
             },
-            ast::Type::PtrType(ty) => TypeRef::RawPtr {
+            ast::Type::PtrType(ty) => TypeRefKind::RawPtr {
                 mutable: ty.mut_token().is_some(),
                 inner: Box::new(self.ty_opt(ty.ty())),
             },
-            ast::Type::SliceType(ty) => TypeRef::Slice(Box::new(self.ty_opt(ty.ty()))),
-            ast::Type::ArrayType(ty) => TypeRef::Array {
+            ast::Type::SliceType(ty) => TypeRefKind::Slice(Box::new(self.ty_opt(ty.ty()))),
+            ast::Type::ArrayType(ty) => TypeRefKind::Array {
                 elem: Box::new(self.ty_opt(ty.ty())),
                 len: self.const_expr(ty.const_arg()),
             },
             ast::Type::TupleType(ty) => {
-                TypeRef::Tuple(ty.fields().map(|field| self.ty(&field)).collect())
+                TypeRefKind::Tuple(ty.fields().map(|field| self.ty(&field)).collect())
             }
-            ast::Type::NeverType(_) => TypeRef::Never,
-            ast::Type::InferType(_) => TypeRef::Infer,
-            ast::Type::ParenType(ty) => self.ty_opt(ty.ty()),
+            ast::Type::NeverType(_) => TypeRefKind::Never,
+            ast::Type::InferType(_) => TypeRefKind::Infer,
+            ast::Type::ParenType(ty) => return self.ty_opt(ty.ty()),
             ast::Type::FnPtrType(ty) => {
                 let params = ty
                     .param_list()
@@ -82,32 +83,35 @@ impl TypeLowerer<'_> {
                     .collect();
                 let ret = match ty.ret_type() {
                     Some(ret) => self.ty_opt(ret.ty()),
-                    None => TypeRef::Tuple(Vec::new()),
+                    None => TypeRef::new(TypeRefKind::Tuple(Vec::new()), range),
                 };
-                TypeRef::FnPtr {
+                TypeRefKind::FnPtr {
                     params,
                     ret: Box::new(ret),
                     is_unsafe: ty.unsafe_token().is_some(),
                 }
             }
-            ast::Type::ImplTraitType(ty) => TypeRef::ImplTrait(self.bounds(ty.type_bound_list())),
-            ast::Type::DynTraitType(ty) => TypeRef::DynTrait(self.bounds(ty.type_bound_list())),
-            ast::Type::ForType(ty) => {
+            ast::Type::ImplTraitType(ty) => {
+                TypeRefKind::ImplTrait(self.bounds(ty.type_bound_list()))
+            }
+            ast::Type::DynTraitType(ty) => TypeRefKind::DynTrait(self.bounds(ty.type_bound_list())),
+            ast::Type::ForType(_) => {
                 let message = "explicit `for<..>` binders are not supported yet";
-                self.error(Self::range(ty), Code::NotYetSupported, message);
-                TypeRef::Error
+                self.error(range, Code::NotYetSupported, message);
+                TypeRefKind::Error
             }
-            ast::Type::MacroType(ty) => {
+            ast::Type::MacroType(_) => {
                 let message = "macros in type position are not supported yet";
-                self.error(Self::range(ty), Code::NotYetSupported, message);
-                TypeRef::Error
+                self.error(range, Code::NotYetSupported, message);
+                TypeRefKind::Error
             }
-            ast::Type::PatternType(ty) => {
+            ast::Type::PatternType(_) => {
                 let message = "pattern types are not supported in Bluing";
-                self.error(Self::range(ty), Code::Unsupported, message);
-                TypeRef::Error
+                self.error(range, Code::Unsupported, message);
+                TypeRefKind::Error
             }
-        }
+        };
+        TypeRef::new(kind, range)
     }
 
     pub fn path(&mut self, path: &ast::Path) -> Option<Path> {
@@ -202,12 +206,16 @@ impl TypeLowerer<'_> {
     fn segment_args(&mut self, segment: &ast::PathSegment) -> Option<GenericArgs> {
         if let Some(list) = segment.parenthesized_arg_list() {
             let inputs = list.type_args().map(|arg| self.ty_opt(arg.ty())).collect();
+            let list_range = Self::range(&list);
             let output = match segment.ret_type() {
                 Some(ret) => self.ty_opt(ret.ty()),
-                None => TypeRef::Tuple(Vec::new()),
+                None => TypeRef::new(TypeRefKind::Tuple(Vec::new()), list_range),
             };
             return Some(GenericArgs {
-                args: vec![GenericArg::Type(TypeRef::Tuple(inputs))],
+                args: vec![GenericArg::Type(TypeRef::new(
+                    TypeRefKind::Tuple(inputs),
+                    list_range,
+                ))],
                 bindings: vec![AssocBinding {
                     name: Name::new("Output"),
                     range: Self::range(&list),

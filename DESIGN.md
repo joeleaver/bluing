@@ -305,15 +305,16 @@ too, in its borrow checker.
 
 ## Testing
 
-- **The rustc oracle.** Each file in `crates/bluing-hir/tests/fixtures` is a
+- **The rustc oracle.** Each file in `crates/bluing/tests/fixtures` is a
   small crate (one or more files) with a header stating which diagnostics
-  Bluing must report and whether rustc accepts it. The test runs both
+  Bluing must report and whether rustc accepts it, compiled for
+  `wasm32-unknown-unknown` like Bluing's output. The test runs both
   compilers on every fixture. It also enforces the subset rule directly: a
   fixture Bluing accepts and rustc rejects fails, whatever its header says.
   Fixtures named `subset_*` cover valid Rust that Bluing reports as
   unsupported.
-- **Resolution targets.** `tests/resolutions.rs` checks what names resolve
-  to, not only that they resolve.
+- **Resolution targets.** `crates/bluing-hir/tests` checks what names
+  resolve to, in signatures and bodies, not only that they resolve.
 - Behavior that rustc decides was checked against rustc 1.98 while writing
   the resolver; when in doubt, add a fixture rather than reasoning about it.
 

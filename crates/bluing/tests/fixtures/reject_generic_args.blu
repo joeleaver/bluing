@@ -1,0 +1,16 @@
+// bluing: generic-args, generic-args, generic-args, generic-args, generic-args, generic-args, generic-args, generic-args
+// rustc: error
+pub struct S<T>(T);
+pub fn many(_: S<u8, u8>) {}
+pub fn few(_: S) {}
+pub fn primitive(_: u8<u8>) {}
+mod m {
+    pub struct X;
+}
+pub fn module(_: m::<u8>::X) {}
+pub struct L;
+pub fn lifetime(_: L<'static>) {}
+pub struct Two<'a, 'b>(&'a u8, &'b u8);
+pub fn partial(_: Two<'static>) {}
+pub struct Forward<T = U, U = u8>(T, U);
+pub fn default_on_fn<T = u8>(_: T) {}

@@ -18,7 +18,7 @@ pub enum Shape<'a, T: Clone> {
 pub trait Area {
     type Output;
     const SIDES: u32;
-    fn area(&self) -> Self::Output;
+    fn area(&self) -> f64;
     fn describe(&self) -> &'static str {
         "shape"
     }
@@ -65,6 +65,6 @@ impl Draw for Unit {
     fn draw(&self) {}
 }
 
-pub fn boxed(_: &dyn Draw) -> impl Area<Output = f64> + Draw {
+pub fn drawable(_: &Unit) -> Unit {
     Unit
 }

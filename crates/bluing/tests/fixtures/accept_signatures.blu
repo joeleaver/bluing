@@ -1,0 +1,55 @@
+// bluing: ok
+// rustc: ok
+// Lifetime elision.
+pub fn one(x: &str) -> &str {
+    x
+}
+pub fn from_static(x: &'static str) -> &str {
+    x
+}
+pub struct S;
+impl S {
+    pub fn method(&self, _: &str) -> &str {
+        ""
+    }
+    pub fn typed(self: &Self, _: &str) -> &str {
+        ""
+    }
+}
+pub fn anon(x: &str) -> &'_ str {
+    x
+}
+pub struct H<'a>(&'a u8);
+pub fn hidden(h: H) -> H {
+    h
+}
+pub const C: &str = "";
+pub static T: &[u8] = &[];
+pub trait Tr {}
+impl Tr for &u8 {}
+impl H<'_> {}
+pub fn pointer(_: fn(&u8) -> &u8) {}
+
+// Generic arguments and defaults.
+pub struct Pair<A, B = A>(A, B);
+pub fn defaulted(_: Pair<u8>, _: Pair<u8, i8>) {}
+pub struct Buffer<const N: usize, const FLAG: bool = false>([u8; N]);
+pub fn buffers(_: Buffer<4>, _: Buffer<2, true>) {}
+pub fn generic<const N: usize>(_: Buffer<N>) {}
+pub struct Chars<const C: char>;
+pub fn chars(_: Chars<'x'>) {}
+
+// `!` as a return type, aliases, unused const parameters.
+pub fn diverges() -> ! {
+    loop {}
+}
+pub fn returns_never(_: fn() -> !) {}
+pub type Bytes = [u8; 16];
+pub type Wrapped<T> = Pair<T>;
+pub fn aliased(_: Bytes, _: Wrapped<u8>) {}
+pub struct Marker<const N: usize>;
+
+// Impls on local types, with constrained parameters.
+pub struct Wrapper<T>(T);
+impl<T> Wrapper<T> {}
+impl<const N: usize> Buffer<N> {}

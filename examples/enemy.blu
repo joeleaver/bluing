@@ -20,11 +20,22 @@ impl Enemy {
     }
 }
 
-fn main() {
-    let mut enemies = vec![Enemy::new("slime", 3), Enemy::new("bat", 1)];
-    for enemy in &mut enemies {
-        if enemy.take_hit(2) {
-            println!("{} is defeated", enemy.name());
+/// Hits every enemy and returns how many were defeated.
+fn hit_all(enemies: &mut [Enemy; 2], dmg: i32) -> i32 {
+    let mut defeated = 0;
+    let mut i = 0;
+    while i < 2 {
+        if enemies[i].take_hit(dmg) {
+            defeated += 1;
         }
+        i += 1;
     }
+    defeated
+}
+
+fn main() {
+    let mut enemies = [Enemy::new("slime", 3), Enemy::new("bat", 1)];
+    let defeated = hit_all(&mut enemies, 2);
+    let first = enemies[0].name();
+    let _ = (defeated, first);
 }

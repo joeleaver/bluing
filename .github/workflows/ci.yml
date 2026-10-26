@@ -23,7 +23,7 @@ jobs:
       - run: cargo clippy --all-targets --locked
       - run: cargo test --locked
       - name: Build the compiler front end for wasm
-        run: cargo build -p bluing-syntax -p bluing-hir -p bluing-std --target wasm32-unknown-unknown --locked
+        run: cargo build -p bluing --target wasm32-unknown-unknown --locked
       - name: Examples are valid Rust
         run: |
           for f in examples/*.blu; do

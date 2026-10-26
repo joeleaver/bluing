@@ -17,8 +17,26 @@ pub struct InFile<T> {
 /// arguments and defaults, enum discriminants.
 pub type ConstExprPtr = InFile<AstPtr<ast::Expr>>;
 
+/// A type as written, with its source range.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TypeRef {
+pub struct TypeRef {
+    pub kind: TypeRefKind,
+    pub range: TextRange,
+}
+
+impl TypeRef {
+    pub fn new(kind: TypeRefKind, range: TextRange) -> Self {
+        TypeRef { kind, range }
+    }
+
+    /// A type that could not be lowered; a diagnostic was already reported.
+    pub fn error(range: TextRange) -> Self {
+        TypeRef::new(TypeRefKind::Error, range)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TypeRefKind {
     Path(Path),
     Reference {
         lifetime: Option<LifetimeRef>,

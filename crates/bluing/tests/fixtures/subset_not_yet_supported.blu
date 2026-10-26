@@ -1,4 +1,4 @@
-// bluing: not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported
+// bluing: not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported
 // rustc: ok
 pub fn local_items() {
     struct Local;

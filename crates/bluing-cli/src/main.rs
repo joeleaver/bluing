@@ -2,10 +2,8 @@
 
 use std::{fs, path::Path, process::ExitCode};
 
+use bluing::{SourceProvider, VfsPath};
 use bluing_base::LineIndex;
-use bluing_hir::{
-    CrateData, CrateGraph, CrateKind, Layered, MemoryProvider, Name, SourceProvider, VfsPath,
-};
 
 const USAGE: &str = "\
 usage: blu check [--allow-unsafe] <main.blu>
@@ -57,35 +55,17 @@ fn check(args: &[String]) -> ExitCode {
         }
     };
 
-    let mut std_files = MemoryProvider::new();
-    for (path, text) in bluing_std::files() {
-        std_files.insert(VfsPath::new(format!("{}/{path}", bluing_std::DIR)), *text);
-    }
-    let provider = Layered(vec![&std_files, &Disk]);
-    let mut graph = CrateGraph::new();
-    let std = graph.add(CrateData {
-        name: Name::new("std"),
-        root: VfsPath::new(bluing_std::ROOT),
-        kind: CrateKind::Library,
-        deps: Vec::new(),
-    });
-    graph.add(CrateData {
-        name: Name::new("script"),
-        root,
-        kind: CrateKind::Script { allow_unsafe },
-        deps: vec![std],
-    });
-
-    let analysis = match bluing_hir::analyze(&graph, &provider) {
-        Ok(analysis) => analysis,
+    let options = bluing::Options { allow_unsafe };
+    let checked = match bluing::check(root, &Disk, &options) {
+        Ok(checked) => checked,
         Err(missing) => {
             eprintln!("blu: cannot read {}", missing.0);
             return ExitCode::from(2);
         }
     };
     let cwd = std::env::current_dir().ok().map(|dir| vfs_path(&dir));
-    for diagnostic in &analysis.diagnostics {
-        let file = analysis.files.get(diagnostic.file);
+    for diagnostic in &checked.diagnostics {
+        let file = checked.files.get(diagnostic.file);
         let pos = LineIndex::new(&file.text).line_col(diagnostic.range.start());
         let shown = cwd
             .as_ref()
@@ -96,7 +76,7 @@ fn check(args: &[String]) -> ExitCode {
             pos.line, pos.col, diagnostic.code, diagnostic.message
         );
     }
-    if analysis.diagnostics.is_empty() {
+    if checked.diagnostics.is_empty() {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE

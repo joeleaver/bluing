@@ -72,7 +72,7 @@ impl Collector<'_> {
         };
         let self_ty = match it.self_ty() {
             Some(ty) => self.types(file).ty(&ty),
-            None => TypeRef::Error,
+            None => TypeRef::error(header),
         };
         let is_trait_impl = it.trait_().is_some();
         let id = self.hir.impls.alloc(Impl {

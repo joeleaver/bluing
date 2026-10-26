@@ -13,7 +13,7 @@ mod lower;
 mod pat;
 mod resolve;
 
-pub use literal::{FloatSuffix, IntSuffix, Literal};
+pub use literal::{FloatSuffix, IntSuffix, Literal, LiteralError, lower_literal};
 
 use std::collections::BTreeMap;
 

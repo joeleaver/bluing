@@ -10,6 +10,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/joeleaver/bluing"
 
 [workspace.dependencies]
+bluing = { path = "crates/bluing" }
 bluing-syntax = { path = "crates/bluing-syntax" }
 ra_ap_syntax = "=0.0.359"
 text-size = "1.1.1"
@@ -17,3 +18,6 @@ la-arena = "0.3.1"
 bluing-base = { path = "crates/bluing-base" }
 bluing-hir = { path = "crates/bluing-hir" }
 bluing-std = { path = "crates/bluing-std" }
+bluing-ty = { path = "crates/bluing-ty" }
+ena = "0.14.4"
+rustc-hash = "2.1.3"

@@ -2,7 +2,7 @@
 
 mod support;
 
-use bluing_hir::hir::{Function, GenericArg, Path, TypeRef};
+use bluing_hir::hir::{Function, GenericArg, Path, TypeRef, TypeRefKind};
 use bluing_hir::resolve::{LifetimeRes, PathRes, PrimTy, Res, ScopeDef, SelfTyOf, Visibility};
 use bluing_hir::{Analysis, DefId, GenericOwner, GenericParamId, Name};
 use support::{analyze_files, render};
@@ -24,10 +24,10 @@ fn function<'a>(analysis: &'a Analysis, name: &str) -> &'a Function {
 }
 
 fn param_path<'a>(analysis: &'a Analysis, fn_name: &str, index: usize) -> &'a Path {
-    match &function(analysis, fn_name).params[index].ty {
-        TypeRef::Path(path) => path,
-        TypeRef::Reference { inner, .. } => match &**inner {
-            TypeRef::Path(path) => path,
+    match &function(analysis, fn_name).params[index].ty.kind {
+        TypeRefKind::Path(path) => path,
+        TypeRefKind::Reference { inner, .. } => match &inner.kind {
+            TypeRefKind::Path(path) => path,
             other => panic!("expected a path, found {other:?}"),
         },
         other => panic!("expected a path, found {other:?}"),
@@ -100,8 +100,10 @@ fn prelude_names_resolve_into_std() {
         PathRes::full(Res::Def(option))
     );
     let path = param_path(&analysis, "f", 0);
-    let Some(GenericArg::Type(TypeRef::Path(arg))) =
-        path.segments[0].args.as_ref().map(|a| &a.args[0])
+    let Some(GenericArg::Type(TypeRef {
+        kind: TypeRefKind::Path(arg),
+        ..
+    })) = path.segments[0].args.as_ref().map(|a| &a.args[0])
     else {
         panic!("expected a type argument");
     };
@@ -166,8 +168,8 @@ fn lifetimes_resolve_to_their_declarations() {
          impl<'a> H<'a> { pub fn g<'b>(_: &'b u8, _: &'a u8, _: &'static u8, _: &'_ u8) {} }",
     );
     let f = function(&analysis, "g");
-    let lifetime = |index: usize| match &f.params[index].ty {
-        TypeRef::Reference {
+    let lifetime = |index: usize| match &f.params[index].ty.kind {
+        TypeRefKind::Reference {
             lifetime: Some(lt), ..
         } => analysis.resolutions.lifetime(lt.id),
         other => panic!("expected a reference with a lifetime, found {other:?}"),

@@ -1,4 +1,4 @@
-// bluing: duplicate, duplicate, duplicate, duplicate, duplicate, duplicate, duplicate
+// bluing: duplicate, duplicate, duplicate, duplicate, duplicate, unused-param, duplicate, duplicate
 // rustc: error
 pub enum E {
     A,

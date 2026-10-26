@@ -1,0 +1,11 @@
+// bluing: placeholder, placeholder, placeholder, placeholder, placeholder
+// rustc: error
+pub fn ret() -> _ {
+    1
+}
+pub const C: _ = 1;
+pub struct S {
+    x: _,
+}
+pub fn param(_: _) {}
+pub static T: [_; 1] = [1];

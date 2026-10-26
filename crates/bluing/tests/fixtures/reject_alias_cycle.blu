@@ -1,0 +1,4 @@
+// bluing: cycle
+// rustc: error
+type A = B;
+type B = A;

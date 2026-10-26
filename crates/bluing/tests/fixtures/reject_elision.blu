@@ -1,0 +1,22 @@
+// bluing: missing-lifetime, missing-lifetime, missing-lifetime, missing-lifetime, missing-lifetime, missing-lifetime, missing-lifetime
+// rustc: error
+pub struct Field {
+    x: &u8,
+}
+pub struct Anon {
+    x: &'_ u8,
+}
+pub struct H<'a>(&'a u8);
+pub struct Hidden {
+    h: H,
+}
+pub fn two(x: &str, _: &str) -> &str {
+    x
+}
+pub fn none() -> &str {
+    ""
+}
+pub fn same<'a>(x: &'a u8, _: &'a u8) -> &u8 {
+    x
+}
+pub fn pointer(_: fn(&u8, &u8) -> &u8) {}

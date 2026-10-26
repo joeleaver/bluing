@@ -1,0 +1,6 @@
+// bluing: unsupported, unsupported
+// rustc: error
+pub fn param(_: !) {}
+pub struct S {
+    x: Option<!>,
+}

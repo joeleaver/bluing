@@ -7,7 +7,7 @@ use super::paths::{Expect, find_generic_param};
 use super::{LifetimeRes, PathRes, SelfTyOf};
 use crate::hir::{
     AssocBindingValue, GenericArg, GenericArgs, GenericParamKind, GenericParams, LifetimeRef, Path,
-    TypeBound, TypeRef, WherePredicate,
+    TypeBound, TypeRef, TypeRefKind, WherePredicate,
 };
 use crate::{GenericOwner, ModuleId};
 
@@ -45,9 +45,9 @@ impl TypeResolver<'_, '_> {
     }
 
     pub(crate) fn resolve_type(&mut self, scope: &LexScope<'_>, ty: &TypeRef) {
-        match ty {
-            TypeRef::Path(path) => self.resolve_path(scope, path, Expect::Type),
-            TypeRef::Reference {
+        match &ty.kind {
+            TypeRefKind::Path(path) => self.resolve_path(scope, path, Expect::Type),
+            TypeRefKind::Reference {
                 lifetime, inner, ..
             } => {
                 if let Some(lifetime) = lifetime {
@@ -55,27 +55,27 @@ impl TypeResolver<'_, '_> {
                 }
                 self.resolve_type(scope, inner);
             }
-            TypeRef::RawPtr { inner, .. } | TypeRef::Slice(inner) => {
+            TypeRefKind::RawPtr { inner, .. } | TypeRefKind::Slice(inner) => {
                 self.resolve_type(scope, inner)
             }
-            TypeRef::Array { elem, .. } => self.resolve_type(scope, elem),
-            TypeRef::Tuple(types) => {
+            TypeRefKind::Array { elem, .. } => self.resolve_type(scope, elem),
+            TypeRefKind::Tuple(types) => {
                 for ty in types {
                     self.resolve_type(scope, ty);
                 }
             }
-            TypeRef::FnPtr { params, ret, .. } => {
+            TypeRefKind::FnPtr { params, ret, .. } => {
                 for ty in params {
                     self.resolve_type(scope, ty);
                 }
                 self.resolve_type(scope, ret);
             }
-            TypeRef::ImplTrait(bounds) | TypeRef::DynTrait(bounds) => {
+            TypeRefKind::ImplTrait(bounds) | TypeRefKind::DynTrait(bounds) => {
                 for bound in bounds {
                     self.resolve_bound(scope, bound);
                 }
             }
-            TypeRef::Never | TypeRef::Infer | TypeRef::Error => {}
+            TypeRefKind::Never | TypeRefKind::Infer | TypeRefKind::Error => {}
         }
     }
 
@@ -154,7 +154,10 @@ impl TypeResolver<'_, '_> {
     pub(crate) fn resolve_generic_args(&mut self, scope: &LexScope<'_>, args: &GenericArgs) {
         for arg in &args.args {
             match arg {
-                GenericArg::Type(TypeRef::Path(path)) => {
+                GenericArg::Type(TypeRef {
+                    kind: TypeRefKind::Path(path),
+                    ..
+                }) => {
                     self.resolve_path(scope, path, Expect::GenericArg);
                 }
                 GenericArg::Type(ty) => self.resolve_type(scope, ty),

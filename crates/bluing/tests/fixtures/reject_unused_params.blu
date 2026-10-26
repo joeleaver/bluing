@@ -1,0 +1,11 @@
+// bluing: unused-param, unused-param, unused-param, unused-param, unused-param
+// rustc: error
+pub struct Ty<T>;
+pub struct Lt<'a>;
+pub enum En<T> {
+    A,
+}
+pub type Alias<T> = u8;
+pub struct Fine<const N: usize>;
+pub struct I;
+impl<X> I {}

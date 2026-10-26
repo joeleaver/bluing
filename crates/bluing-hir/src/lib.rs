@@ -15,6 +15,7 @@ pub mod resolve;
 mod vfs;
 
 pub use bluing_base::{Diagnostic, FileId};
+pub use bluing_syntax::ra_ap_syntax;
 pub use crate_graph::{CrateData, CrateGraph, CrateKind};
 pub use files::{FileData, Files};
 pub use hir::Hir;

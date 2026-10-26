@@ -1,0 +1,5 @@
+// bluing: coherence, coherence, coherence
+// rustc: error
+impl u8 {}
+impl Option<u8> {}
+impl<X> X {}

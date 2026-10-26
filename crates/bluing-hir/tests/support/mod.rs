@@ -1,5 +1,5 @@
 //! Shared helpers: build a compilation of a script crate plus the embedded
-//! standard library from in-memory files, and parse fixture files.
+//! standard library from in-memory files.
 
 #![allow(dead_code)] // Each test binary uses a different subset.
 
@@ -61,78 +61,4 @@ pub fn render(analysis: &Analysis) -> String {
             )
         })
         .collect()
-}
-
-/// A test case written as one file:
-///
-/// ```text
-/// // bluing: ok                 (or a comma-separated list of codes)
-/// // rustc: ok                  (or `error`)
-/// //- main.blu                  (optional; starts a file, default main.blu)
-/// ...source...
-/// ```
-pub struct Fixture {
-    pub files: Vec<(String, String)>,
-    /// The diagnostic codes Bluing must report, in order. Empty means none.
-    pub bluing: Vec<Code>,
-    pub rustc_ok: bool,
-}
-
-impl Fixture {
-    pub fn parse(text: &str) -> Result<Fixture, String> {
-        let mut lines = text.lines().peekable();
-        let bluing = header(lines.next(), "bluing")?;
-        let rustc = header(lines.next(), "rustc")?;
-        let bluing = if bluing == "ok" {
-            Vec::new()
-        } else {
-            bluing
-                .split(',')
-                .map(|name| Code::from_name(name.trim()).ok_or(format!("unknown code `{name}`")))
-                .collect::<Result<_, _>>()?
-        };
-        let rustc_ok = match rustc.as_str() {
-            "ok" => true,
-            "error" => false,
-            other => {
-                return Err(format!(
-                    "`// rustc:` must be `ok` or `error`, not `{other}`"
-                ));
-            }
-        };
-        let mut files: Vec<(String, String)> = Vec::new();
-        for line in lines {
-            if let Some(path) = line.strip_prefix("//- ") {
-                files.push((path.trim().to_owned(), String::new()));
-                continue;
-            }
-            if files.is_empty() {
-                files.push(("main.blu".to_owned(), String::new()));
-            }
-            let text = &mut files.last_mut().expect("a file was just pushed").1;
-            text.push_str(line);
-            text.push('\n');
-        }
-        if files.is_empty() {
-            return Err("a fixture needs some source".to_owned());
-        }
-        Ok(Fixture {
-            files,
-            bluing,
-            rustc_ok,
-        })
-    }
-
-    pub fn file_refs(&self) -> Vec<(&str, &str)> {
-        self.files
-            .iter()
-            .map(|(path, text)| (path.as_str(), text.as_str()))
-            .collect()
-    }
-}
-
-fn header(line: Option<&str>, key: &str) -> Result<String, String> {
-    line.and_then(|line| line.strip_prefix(&format!("// {key}:")))
-        .map(|value| value.trim().to_owned())
-        .ok_or(format!("expected a `// {key}: ...` header line"))
 }

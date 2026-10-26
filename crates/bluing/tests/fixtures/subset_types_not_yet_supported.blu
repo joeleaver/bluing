@@ -1,0 +1,14 @@
+// bluing: not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported
+// rustc: ok
+// Associated type paths, trait objects, `impl Trait` and constant items as
+// generic arguments come with milestone 3c and milestone 7.
+pub trait Shape {
+    type Unit;
+    fn unit(&self) -> Self::Unit;
+}
+pub fn assoc<S: Shape>(_: <S as Shape>::Unit) {}
+pub fn object(_: &dyn Shape<Unit = u8>) {}
+pub fn opaque() -> impl Sized {}
+pub struct Buffer<const N: usize>;
+pub const SIZE: usize = 4;
+pub fn sized(_: Buffer<SIZE>) {}

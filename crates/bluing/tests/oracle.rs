@@ -12,7 +12,7 @@ use std::{
     process::Command,
 };
 
-use support::{Fixture, analyze_files, codes, render};
+use support::{Fixture, check_files, codes, render};
 
 #[test]
 fn fixtures_agree_with_bluing_and_rustc() {
@@ -44,13 +44,13 @@ fn fixtures_agree_with_bluing_and_rustc() {
                 "{name}: Bluing accepts a program rustc rejects, which breaks the subset rule"
             ));
         }
-        let analysis = analyze_files(&fixture.file_refs());
-        let actual = codes(&analysis);
+        let checked = check_files(&fixture.file_refs());
+        let actual = codes(&checked);
         if actual != fixture.bluing {
             failures.push(format!(
                 "{name}: Bluing reported {actual:?}, expected {:?}\n{}",
                 fixture.bluing,
-                render(&analysis)
+                render(&checked)
             ));
         }
         match run_rustc(&name, &fixture) {
@@ -100,6 +100,9 @@ fn run_rustc(name: &str, fixture: &Fixture) -> Result<RustcOutcome, String> {
             "--crate-type",
             "lib",
             "--emit=metadata",
+            // Bluing targets wasm32, where `usize` is 32 bits.
+            "--target",
+            "wasm32-unknown-unknown",
             "-A",
             "warnings",
         ])

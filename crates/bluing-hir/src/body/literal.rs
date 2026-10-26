@@ -78,9 +78,14 @@ impl FloatSuffix {
 
 /// Why a literal could not be lowered. `Reported` means the parser already
 /// reported the problem (an invalid escape, for example).
-pub(super) enum LiteralError {
+pub enum LiteralError {
     Reported,
     Error(Code, String),
+}
+
+/// Lowers a literal, for callers outside bodies (constants in types).
+pub fn lower_literal(literal: &ast::Literal) -> Result<Literal, LiteralError> {
+    lower(literal)
 }
 
 pub(super) fn lower(literal: &ast::Literal) -> Result<Literal, LiteralError> {

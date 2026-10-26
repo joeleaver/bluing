@@ -1,0 +1,17 @@
+[package]
+name = "bluing"
+description = "The Bluing compiler: checks a script crate through every phase"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bluing-base.workspace = true
+bluing-hir.workspace = true
+bluing-std.workspace = true
+bluing-ty.workspace = true
+
+[dev-dependencies]
+bluing-base.workspace = true

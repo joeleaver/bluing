@@ -47,10 +47,29 @@ pub enum Code {
     /// Misplaced control flow: `break` or `continue` outside a loop, `break`
     /// with a value out of `while`, `return` outside a function, ...
     Control,
+    /// The wrong number of generic arguments, or generic arguments where
+    /// none are allowed.
+    GenericArgs,
+    /// A reference or path without a lifetime where one cannot be elided.
+    MissingLifetime,
+    /// `_` in an item signature.
+    Placeholder,
+    /// A definition that depends on itself, such as type aliases that expand
+    /// to each other.
+    Cycle,
+    /// An `impl` that is not allowed for its type, such as an inherent impl
+    /// for a primitive or for a type from another crate.
+    Coherence,
+    /// Types that do not match.
+    TypeMismatch,
+    /// A literal or constant that does not fit its type.
+    Overflow,
+    /// A type or lifetime parameter that an item never uses.
+    UnusedParam,
 }
 
 impl Code {
-    pub const ALL: [Code; 17] = [
+    pub const ALL: [Code; 25] = [
         Code::Syntax,
         Code::Unsafe,
         Code::Ffi,
@@ -68,6 +87,14 @@ impl Code {
         Code::UndeclaredLifetime,
         Code::Visibility,
         Code::Control,
+        Code::GenericArgs,
+        Code::MissingLifetime,
+        Code::Placeholder,
+        Code::Cycle,
+        Code::Coherence,
+        Code::TypeMismatch,
+        Code::Overflow,
+        Code::UnusedParam,
     ];
 
     /// The code whose [`Code::as_str`] is `name`.
@@ -95,6 +122,14 @@ impl Code {
             Code::UndeclaredLifetime => "undeclared-lifetime",
             Code::Visibility => "visibility",
             Code::Control => "control",
+            Code::GenericArgs => "generic-args",
+            Code::MissingLifetime => "missing-lifetime",
+            Code::Placeholder => "placeholder",
+            Code::Cycle => "cycle",
+            Code::Coherence => "coherence",
+            Code::TypeMismatch => "type-mismatch",
+            Code::Overflow => "overflow",
+            Code::UnusedParam => "unused-param",
         }
     }
 }
@@ -151,6 +186,14 @@ mod tests {
             Code::UndeclaredLifetime => 14,
             Code::Visibility => 15,
             Code::Control => 16,
+            Code::GenericArgs => 17,
+            Code::MissingLifetime => 18,
+            Code::Placeholder => 19,
+            Code::Cycle => 20,
+            Code::Coherence => 21,
+            Code::TypeMismatch => 22,
+            Code::Overflow => 23,
+            Code::UnusedParam => 24,
         }
     }
 

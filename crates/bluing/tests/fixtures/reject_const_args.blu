@@ -1,0 +1,11 @@
+// bluing: wrong-kind, overflow, type-mismatch, type-mismatch, overflow, generic-args, generic-args
+// rustc: error
+pub struct Float<const X: f32>;
+pub struct Small<const V: u8>;
+pub fn big(_: Small<300>) {}
+pub fn wrong_kind(_: Small<true>) {}
+pub fn length(_: [u8; 3u8]) {}
+pub fn huge(_: [u8; 5000000000]) {}
+pub fn type_for_const(_: Small<u8>) {}
+pub struct T<X>(X);
+pub fn const_for_type(_: T<3>) {}
