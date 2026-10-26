@@ -1,0 +1,25 @@
+// bluing: not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported, not-yet-supported
+// rustc: ok
+// Generic values, trait and primitive-type methods, operators on
+// non-primitive types and the coercions of milestone 3d are not type
+// checked yet, so they are reported rather than accepted unchecked.
+pub struct P<T>(T);
+pub fn generic_constructor() -> P<u8> {
+    P(1)
+}
+pub fn generic_arguments() {
+    let _ = Some::<u8>;
+}
+pub fn primitive_method(x: &[u8]) -> usize {
+    x.len()
+}
+pub fn trait_method(x: &u8) -> u8 {
+    x.clone()
+}
+pub fn reference_operator(x: &i32) -> i32 {
+    x + 1
+}
+pub static UNSIZED: &[u8] = &[];
+pub fn reborrow(x: &mut u8) -> &u8 {
+    x
+}

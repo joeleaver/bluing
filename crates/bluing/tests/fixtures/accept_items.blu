@@ -1,8 +1,8 @@
 // bluing: ok
 // rustc: ok
-pub struct Point<T> {
-    pub x: T,
-    y: T,
+pub struct Point {
+    pub x: i32,
+    y: i32,
 }
 
 pub struct Unit;
@@ -24,11 +24,11 @@ pub trait Area {
     }
 }
 
-impl<T: Copy> Point<T> {
-    pub fn new(x: T, y: T) -> Self {
+impl Point {
+    pub fn new(x: i32, y: i32) -> Self {
         Point { x, y }
     }
-    pub fn x(&self) -> &T {
+    pub fn x(&self) -> &i32 {
         &self.x
     }
 }
@@ -42,7 +42,7 @@ impl Area for Unit {
 }
 
 pub type Grid<T> = [[T; 3]; 3];
-pub const ORIGIN: Point<i32> = Point { x: 0, y: 0 };
+pub const ORIGIN: Point = Point { x: 0, y: 0 };
 pub static mut COUNTER: u64 = 0;
 const _: () = ();
 
@@ -50,7 +50,8 @@ pub fn largest<'a, T>(items: &'a [T]) -> Option<&'a T>
 where
     T: Clone,
 {
-    items.first()
+    let _ = items;
+    loop {}
 }
 
 pub fn pointer(f: fn(&str) -> usize) -> usize {

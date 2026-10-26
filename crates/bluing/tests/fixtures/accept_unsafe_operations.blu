@@ -1,0 +1,22 @@
+// bluing: ok
+// rustc: ok
+// options: allow-unsafe
+static mut COUNTER: u64 = 0;
+pub fn bump() {
+    unsafe {
+        COUNTER += 1;
+    }
+}
+pub unsafe fn read() -> u64 {
+    unsafe { COUNTER }
+}
+unsafe fn helper() {}
+pub fn call() {
+    unsafe { helper() }
+}
+pub fn raw(p: *const u8) -> u8 {
+    unsafe { *p }
+}
+pub fn pointer(f: unsafe fn()) {
+    unsafe { f() }
+}

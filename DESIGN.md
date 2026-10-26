@@ -152,8 +152,11 @@ source ─ parse ─ name resolution ─ type check (with region variables) ─ 
 |---|---|
 | `bluing-base` | File ids, diagnostics and their codes, line/column mapping |
 | `bluing-syntax` | Parsing and subset checking |
-| `bluing-hir` | Module tree, item lowering (HIR) and name resolution |
+| `bluing-hir` | Module tree, item lowering (HIR), name resolution, body lowering |
+| `bluing-ty` | Types, generics, item signatures and impl checks |
+| `bluing-typeck` | Type inference and checking of bodies |
 | `bluing-std` | Bluing's standard library sources, embedded in the compiler |
+| `bluing` | The compiler driver: runs every phase on a script crate |
 | `bluing-cli` | The `blu` command |
 
 ## Files, crates and the standard library
@@ -265,7 +268,7 @@ From the first part on, function bodies are checked, and any construct in a
 body that the type checker does not handle yet is reported as "not supported
 yet" rather than accepted unchecked.
 
-- **3a: bodies and monomorphic types.**
+- **3a: bodies and monomorphic types.** *(done)*
   - Function bodies and constant initializers are lowered to body HIR
     (expressions, statements, patterns) with every name resolved: local
     variables and their scopes, loop labels, and item paths in both
@@ -285,15 +288,25 @@ yet" rather than accepted unchecked.
     patterns in `let` and parameters (names, `_`, tuples, structs), and the
     coercion of the never type `!` (from `return`, `break`, `loop {}`, ...)
     to any type.
+  - Checks that rustc makes on that code: literals that do not fit their
+    type (`overflowing_literals`), `unsafe` operations outside `unsafe`
+    blocks and functions (mutable statics, raw pointer dereferences,
+    `unsafe` calls), references to mutable statics (`static_mut_refs`),
+    duplicate items across inherent impls, and values without a size known
+    at compile time.
+  - Where code needs something from a later part (instantiating a generic
+    item, a trait method, an operator on a non-primitive type, a coercion
+    of 3d, a method of a primitive type from `std`), it is reported as not
+    supported yet, never as an error the program does not have.
 - **3b: patterns and `match`.** All patterns, `match`, `if let`, `while let`,
   `let ... else`, and exhaustiveness and refutability checking.
 - **3c: generics and traits.** Instantiating generic items with inference,
   trait bounds and a trait solver, trait methods and associated items,
   operator traits, `Copy`, `Clone`, `Sized`, and the built-in derives.
-- **3d: coercions, casts and constants.** Reborrowing, unsizing and deref
-  coercions, `as` casts, constant evaluation of array lengths, the
-  deny-by-default lints that make rustc reject a program (such as
-  `overflowing_literals`), and checks on `unsafe` operations.
+- **3d: coercions, casts and constants.** Reborrowing, unsizing, deref and
+  function-pointer coercions, `as` casts, constant evaluation (array lengths
+  and constants beyond literals), and the deny-by-default lints that come
+  from evaluating constants (`unconditional_panic`, `arithmetic_overflow`).
 
 Macro calls in bodies (`println!`, `vec!`, `assert!`, ...) expand to calls
 into `std`, so they arrive with the standard library in milestone 6. Closures,
@@ -307,14 +320,18 @@ too, in its borrow checker.
 
 - **The rustc oracle.** Each file in `crates/bluing/tests/fixtures` is a
   small crate (one or more files) with a header stating which diagnostics
-  Bluing must report and whether rustc accepts it, compiled for
-  `wasm32-unknown-unknown` like Bluing's output. The test runs both
+  Bluing must report and whether rustc accepts it (and optionally
+  `// options: allow-unsafe`), compiled for `wasm32-unknown-unknown` like
+  Bluing's output. The test runs both
   compilers on every fixture. It also enforces the subset rule directly: a
   fixture Bluing accepts and rustc rejects fails, whatever its header says.
   Fixtures named `subset_*` cover valid Rust that Bluing reports as
   unsupported.
 - **Resolution targets.** `crates/bluing-hir/tests` checks what names
   resolve to, in signatures and bodies, not only that they resolve.
+- **Type checking results.** `crates/bluing-typeck/tests` checks the types,
+  method resolutions and adjustments recorded for bodies, which later
+  phases rely on.
 - Behavior that rustc decides was checked against rustc 1.98 while writing
   the resolver; when in doubt, add a fixture rather than reasoning about it.
 

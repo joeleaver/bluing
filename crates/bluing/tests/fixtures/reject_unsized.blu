@@ -1,0 +1,9 @@
+// bluing: unsized, unsized, unsized
+// rustc: error
+pub fn local(s: &str) {
+    let _x = *s;
+}
+pub fn parameter(_x: str) {}
+pub fn returns() -> str {
+    loop {}
+}

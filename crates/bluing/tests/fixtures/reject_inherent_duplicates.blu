@@ -1,0 +1,16 @@
+// bluing: duplicate, duplicate, duplicate, unsupported
+// rustc: error
+pub struct S;
+impl S {
+    fn m(&self) {}
+    const C: u8 = 1;
+    fn f() {}
+}
+impl S {
+    fn m(&self) {}
+    const C: u8 = 2;
+    const f: u8 = 3;
+}
+impl S {
+    type T = u8;
+}

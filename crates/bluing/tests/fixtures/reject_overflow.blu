@@ -1,0 +1,18 @@
+// bluing: overflow, overflow, overflow, overflow
+// rustc: error
+pub fn too_big() {
+    let _: u8 = 256;
+}
+pub fn too_small() {
+    let _: i8 = -129;
+}
+pub fn fits() {
+    let _ = -128i8;
+    let _: i8 = -128;
+}
+pub fn float() {
+    let _: f32 = 1e40;
+}
+pub fn default_i32() {
+    let _ = 3000000000;
+}

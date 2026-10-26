@@ -11,12 +11,16 @@ pub const ROOT_DIR: &str = "/script";
 /// Checks a script crate whose files are `(path relative to the crate
 /// directory, text)`; the first file is the crate root.
 pub fn check_files(files: &[(&str, &str)]) -> Checked {
+    check_files_with(files, &Options::default())
+}
+
+pub fn check_files_with(files: &[(&str, &str)], options: &Options) -> Checked {
     let mut provider = MemoryProvider::new();
     for (path, text) in files {
         provider.insert(VfsPath::new(format!("{ROOT_DIR}/{path}")), *text);
     }
     let root = VfsPath::new(format!("{ROOT_DIR}/{}", files[0].0));
-    check(root, &provider, &Options::default()).expect("the crate root exists")
+    check(root, &provider, options).expect("the crate root exists")
 }
 
 /// The codes of every diagnostic, in order.
@@ -46,6 +50,7 @@ pub fn render(checked: &Checked) -> String {
 /// ```text
 /// // bluing: ok                 (or a comma-separated list of codes)
 /// // rustc: ok                  (or `error`)
+/// // options: allow-unsafe      (optional)
 /// //- main.blu                  (optional; starts a file, default main.blu)
 /// ...source...
 /// ```
@@ -54,13 +59,27 @@ pub struct Fixture {
     /// The diagnostic codes Bluing must report, in order. Empty means none.
     pub bluing: Vec<Code>,
     pub rustc_ok: bool,
+    pub options: Options,
 }
 
 impl Fixture {
     pub fn parse(text: &str) -> Result<Fixture, String> {
-        let mut lines = text.lines();
+        let mut lines = text.lines().peekable();
         let bluing = header(lines.next(), "bluing")?;
         let rustc = header(lines.next(), "rustc")?;
+        let mut options = Options::default();
+        if let Some(value) = lines
+            .peek()
+            .and_then(|line| line.strip_prefix("// options:"))
+        {
+            for option in value.split(',').map(str::trim) {
+                match option {
+                    "allow-unsafe" => options.allow_unsafe = true,
+                    other => return Err(format!("unknown option `{other}`")),
+                }
+            }
+            lines.next();
+        }
         let bluing = if bluing == "ok" {
             Vec::new()
         } else {
@@ -98,6 +117,7 @@ impl Fixture {
             files,
             bluing,
             rustc_ok,
+            options,
         })
     }
 

@@ -9,11 +9,6 @@ pub fn first<T: Clone + Copy + Sized>(value: Option<T>) -> Result<T, ()> {
     loop {}
 }
 
-pub fn values() {
-    let _ = Some::<u8>;
-    let _ = Nothing::<u8>;
-    let _ = std::result::Result::<u8, ()>::Ok;
-}
 
 pub fn marker<T: MarkerCopy>(_: std::option::Option<T>) {}
 

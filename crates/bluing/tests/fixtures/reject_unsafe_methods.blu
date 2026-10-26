@@ -1,0 +1,17 @@
+// bluing: requires-unsafe, denied-lint
+// rustc: error
+// options: allow-unsafe
+pub struct S;
+impl S {
+    pub unsafe fn danger(&self) {}
+    pub fn get(&self) -> u8 {
+        1
+    }
+}
+pub fn method(s: &S) {
+    s.danger();
+}
+static mut GLOBAL: S = S;
+pub fn autoref() -> u8 {
+    unsafe { GLOBAL.get() }
+}

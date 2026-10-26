@@ -1,0 +1,6 @@
+// bluing: requires-unsafe
+// rustc: error
+static mut COUNTER: u64 = 0;
+pub fn read() -> u64 {
+    COUNTER
+}

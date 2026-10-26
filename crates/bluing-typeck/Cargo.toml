@@ -1,0 +1,18 @@
+[package]
+name = "bluing-typeck"
+description = "Type inference and checking of bodies for the Bluing scripting language"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bluing-base.workspace = true
+bluing-hir.workspace = true
+bluing-ty.workspace = true
+ena.workspace = true
+la-arena.workspace = true
+
+[dev-dependencies]
+bluing-std.workspace = true

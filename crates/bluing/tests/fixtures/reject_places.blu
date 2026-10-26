@@ -1,0 +1,11 @@
+// bluing: place, place
+// rustc: error
+fn f() -> i32 {
+    1
+}
+pub fn literal() {
+    1 = 2;
+}
+pub fn call() {
+    f() = 2;
+}

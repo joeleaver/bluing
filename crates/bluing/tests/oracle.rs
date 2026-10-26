@@ -12,7 +12,7 @@ use std::{
     process::Command,
 };
 
-use support::{Fixture, check_files, codes, render};
+use support::{Fixture, check_files_with, codes, render};
 
 #[test]
 fn fixtures_agree_with_bluing_and_rustc() {
@@ -44,7 +44,7 @@ fn fixtures_agree_with_bluing_and_rustc() {
                 "{name}: Bluing accepts a program rustc rejects, which breaks the subset rule"
             ));
         }
-        let checked = check_files(&fixture.file_refs());
+        let checked = check_files_with(&fixture.file_refs(), &fixture.options);
         let actual = codes(&checked);
         if actual != fixture.bluing {
             failures.push(format!(

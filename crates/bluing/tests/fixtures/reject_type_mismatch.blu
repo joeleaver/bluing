@@ -1,0 +1,31 @@
+// bluing: type-mismatch, type-mismatch, type-mismatch, type-mismatch, type-mismatch, type-mismatch, type-mismatch, type-mismatch
+// rustc: error
+pub fn wrong_return() -> i32 {
+    true
+}
+pub fn wrong_annotation() {
+    let x: u8 = 1;
+    let _y: i32 = x;
+}
+pub fn branches(c: bool) -> i32 {
+    if c { 1 } else { "no" }
+}
+pub fn missing_else() {
+    if true {
+        1
+    }
+}
+pub fn integer_for_float() {
+    let _x: f64 = 1;
+}
+pub fn empty_return() -> u8 {
+    return;
+}
+pub fn tuple_pattern() {
+    let (_a, _b) = 1;
+}
+pub fn break_without_value() -> i32 {
+    loop {
+        break;
+    }
+}

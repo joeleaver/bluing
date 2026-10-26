@@ -66,10 +66,26 @@ pub enum Code {
     Overflow,
     /// A type or lifetime parameter that an item never uses.
     UnusedParam,
+    /// A call with the wrong number of arguments.
+    ArgCount,
+    /// A type that cannot be inferred: type annotations are needed.
+    Inference,
+    /// An operator, index or dereference that a type does not support.
+    Operator,
+    /// An assignment to something that is not a place (a variable, field, index or dereference).
+    Place,
+    /// A struct literal or pattern that leaves out fields.
+    MissingFields,
+    /// A value whose type has no size known at compile time, where one is required.
+    Unsized,
+    /// An operation that is only allowed in an `unsafe` block or function: using a mutable static, dereferencing a raw pointer, calling an `unsafe` function.
+    RequiresUnsafe,
+    /// Code that one of rustc's deny-by-default lints rejects, such as a reference to a mutable static.
+    DeniedLint,
 }
 
 impl Code {
-    pub const ALL: [Code; 25] = [
+    pub const ALL: [Code; 33] = [
         Code::Syntax,
         Code::Unsafe,
         Code::Ffi,
@@ -95,6 +111,14 @@ impl Code {
         Code::TypeMismatch,
         Code::Overflow,
         Code::UnusedParam,
+        Code::ArgCount,
+        Code::Inference,
+        Code::Operator,
+        Code::Place,
+        Code::MissingFields,
+        Code::Unsized,
+        Code::RequiresUnsafe,
+        Code::DeniedLint,
     ];
 
     /// The code whose [`Code::as_str`] is `name`.
@@ -130,6 +154,14 @@ impl Code {
             Code::TypeMismatch => "type-mismatch",
             Code::Overflow => "overflow",
             Code::UnusedParam => "unused-param",
+            Code::ArgCount => "arg-count",
+            Code::Inference => "inference",
+            Code::Operator => "operator",
+            Code::Place => "place",
+            Code::MissingFields => "missing-fields",
+            Code::Unsized => "unsized",
+            Code::RequiresUnsafe => "requires-unsafe",
+            Code::DeniedLint => "denied-lint",
         }
     }
 }
@@ -194,6 +226,14 @@ mod tests {
             Code::TypeMismatch => 22,
             Code::Overflow => 23,
             Code::UnusedParam => 24,
+            Code::ArgCount => 25,
+            Code::Inference => 26,
+            Code::Operator => 27,
+            Code::Place => 28,
+            Code::MissingFields => 29,
+            Code::Unsized => 30,
+            Code::RequiresUnsafe => 31,
+            Code::DeniedLint => 32,
         }
     }
 

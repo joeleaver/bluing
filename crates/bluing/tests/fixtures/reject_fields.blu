@@ -1,0 +1,36 @@
+// bluing: unresolved, private, private, missing-fields, duplicate, unresolved, missing-fields, unresolved
+// rustc: error
+pub struct P {
+    pub x: i32,
+    pub y: i32,
+}
+mod m {
+    pub struct Q {
+        pub a: i32,
+        b: i32,
+    }
+}
+pub fn no_field(p: P) -> i32 {
+    p.z
+}
+pub fn private_literal() -> m::Q {
+    m::Q { a: 1, b: 2 }
+}
+pub fn private_access(q: m::Q) -> i32 {
+    q.b
+}
+pub fn missing() -> P {
+    P { x: 1 }
+}
+pub fn twice() -> P {
+    P { x: 1, y: 2, x: 3 }
+}
+pub fn unknown() -> P {
+    P { x: 1, y: 2, z: 3 }
+}
+pub fn pattern(p: P) {
+    let P { x: _ } = p;
+}
+pub fn tuple_index(t: (i32, i32)) -> i32 {
+    t.2
+}

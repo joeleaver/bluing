@@ -3,6 +3,7 @@
 //! constrained.
 
 use bluing_base::Code;
+use bluing_hir::hir::AssocItem;
 use bluing_hir::resolve::Res;
 use bluing_hir::{CrateKind, DefId, GenericOwner, ImplId, TraitId};
 
@@ -72,6 +73,61 @@ impl TyCx<'_> {
             self.check_constrained(id, self_ty, trait_ref);
             if imp.trait_ref.is_none() {
                 self.register_inherent(id, self_ty);
+            }
+        }
+        self.check_inherent_duplicates();
+    }
+
+    /// Inherent impls of the same type may not define the same name twice
+    /// (functions and constants share a namespace), and may not define
+    /// associated types, which are unstable.
+    fn check_inherent_duplicates(&mut self) {
+        let hir = self.hir;
+        let groups: Vec<Vec<ImplId>> = self.inherent_impls.values().cloned().collect();
+        for impls in groups {
+            // Impls with the same self type, ignoring lifetimes.
+            let mut by_type: Vec<(Ty, Vec<ImplId>)> = Vec::new();
+            for id in impls {
+                let ty = self.impl_self_ty(id);
+                let ty = crate::fold::erase_regions(&mut self.interner, ty);
+                match by_type.iter_mut().find(|(t, _)| *t == ty) {
+                    Some((_, ids)) => ids.push(id),
+                    None => by_type.push((ty, vec![id])),
+                }
+            }
+            for (_, ids) in by_type {
+                let mut seen: Vec<(bluing_hir::Name, ImplId)> = Vec::new();
+                for id in ids {
+                    for &item in &hir.impls[id].items {
+                        let (name, loc) = match item {
+                            AssocItem::Fn(f) => {
+                                (hir.functions[f].name.clone(), hir.functions[f].loc)
+                            }
+                            AssocItem::Const(c) => match &hir.consts[c].name {
+                                Some(name) => (name.clone(), hir.consts[c].loc),
+                                None => continue,
+                            },
+                            AssocItem::TypeAlias(a) => {
+                                let alias = &hir.type_aliases[a];
+                                let message =
+                                    "inherent associated types are not supported in Bluing";
+                                self.error(
+                                    alias.loc.file,
+                                    alias.loc.range,
+                                    Code::Unsupported,
+                                    message,
+                                );
+                                continue;
+                            }
+                        };
+                        // Duplicates within one impl were reported with its items.
+                        if seen.iter().any(|(n, other)| *n == name && *other != id) {
+                            let message = format!("duplicate definitions with name `{name}`");
+                            self.error(loc.file, loc.range, Code::Duplicate, message);
+                        }
+                        seen.push((name, id));
+                    }
+                }
             }
         }
     }

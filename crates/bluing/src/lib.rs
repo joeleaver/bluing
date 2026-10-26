@@ -1,5 +1,6 @@
 //! The Bluing compiler driver. [`check`] runs every phase on a script crate:
-//! loading and parsing, name resolution, body lowering, and signature types.
+//! loading and parsing, name resolution, body lowering, signature types, and
+//! type checking of bodies.
 //!
 //! The standard library is embedded; hosts only supply the script's files.
 
@@ -46,7 +47,8 @@ pub fn check(
         deps: vec![std],
     });
     let analysis = bluing_hir::analyze(&graph, &provider)?;
-    let types = bluing_ty::collect(&analysis, &graph);
+    let mut types = bluing_ty::collect(&analysis, &graph);
+    bluing_typeck::typeck(&mut types, &analysis.bodies);
     let mut diagnostics = analysis.diagnostics.clone();
     diagnostics.extend(types.diagnostics);
     diagnostics.sort_by_key(|d| (d.file, d.range.start(), d.range.end()));

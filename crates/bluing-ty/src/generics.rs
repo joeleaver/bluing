@@ -21,7 +21,7 @@ pub struct ParamDef {
 }
 
 /// The generic parameters in scope for an item.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Generics {
     /// Every parameter in index order: the parent's, `Self`, the item's own.
     pub params: Vec<ParamDef>,

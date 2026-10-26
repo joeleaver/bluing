@@ -24,7 +24,7 @@ pub fn hidden(h: H) -> H {
     h
 }
 pub const C: &str = "";
-pub static T: &[u8] = &[];
+pub static T: &[u8; 0] = &[];
 pub trait Tr {}
 impl Tr for &u8 {}
 impl H<'_> {}

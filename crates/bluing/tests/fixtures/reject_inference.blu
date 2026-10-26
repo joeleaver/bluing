@@ -1,0 +1,8 @@
+// bluing: inference, inference
+// rustc: error
+pub fn unused() {
+    let _x;
+}
+pub fn empty_array() {
+    let _v = [];
+}

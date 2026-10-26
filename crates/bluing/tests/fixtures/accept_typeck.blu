@@ -1,0 +1,166 @@
+// bluing: ok
+// rustc: ok
+// Literals and inference.
+pub fn literals() -> (u8, i64, f32, char, bool, &'static str, &'static [u8; 2]) {
+    let a = 1;
+    let narrow: u8 = a;
+    let wide = 2;
+    let wide: i64 = wide * 3;
+    let f = 1.5;
+    let f: f32 = f;
+    (narrow, wide, f, 'x', true, "text", b"ab")
+}
+
+pub fn negatives() -> (i8, i8, i32) {
+    (-128i8, -128, -2147483648)
+}
+
+// Operators on primitive types.
+pub fn arithmetic(x: i32, y: u8) -> i32 {
+    let a = (x + 1) * 2 - x / 3 % 4;
+    let b = a << y >> 1u32;
+    let c = (a & 0xff) | (b ^ 1);
+    let d = !c;
+    let e = -d;
+    let mut f = e;
+    f += 1;
+    f <<= 2u8;
+    f
+}
+
+pub fn logic(a: bool, b: bool, x: f64) -> bool {
+    let both = a && b || !a;
+    let bits = a & b | a ^ b;
+    both && bits && x < 1.0 && x >= -1.0 && 'a' != 'b' && 1 == 1
+}
+
+// Control flow and divergence.
+pub fn branches(c: bool) -> i32 {
+    if c {
+        return 1;
+    }
+    let value = if c { 2 } else { 3 };
+    let looped = loop {
+        if c {
+            break value;
+        }
+        break 4;
+    };
+    let labeled = 'block: {
+        if c {
+            break 'block 5;
+        }
+        6
+    };
+    let mut count = 0;
+    while count < 10 {
+        count += 1;
+        if count == 5 {
+            continue;
+        }
+    }
+    looped + labeled + count
+}
+
+pub fn diverges(c: bool) -> u8 {
+    let x: u8 = if c { return 1 } else { 2 };
+    loop {
+        if x > 1 {
+            return x;
+        }
+    }
+}
+
+// Tuples, arrays and indexing.
+pub fn collections(i: usize) -> u8 {
+    let t = (1u8, (2u8, 3u8));
+    let nested = [[0u8; 3]; 2];
+    let a = [1, 2, 3];
+    let r = &a;
+    t.0 + (t.1).1 + nested[1][i] + a[i] + r[0]
+}
+
+// Structs, enums and methods.
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
+}
+
+pub struct Meters(pub f64);
+pub struct Marker;
+
+pub enum Direction {
+    North,
+    Toward(i32, i32),
+    Away { distance: i32 },
+}
+
+impl Point {
+    pub const ORIGIN: Point = Point { x: 0, y: 0 };
+
+    pub fn new(x: i32, y: i32) -> Point {
+        Point { x, y }
+    }
+
+    pub fn sum(&self) -> i32 {
+        self.x + self.y
+    }
+
+    pub fn shift(&mut self, by: i32) {
+        self.x += by;
+    }
+
+    pub fn into_pair(self) -> (i32, i32) {
+        (self.x, self.y)
+    }
+
+    pub fn origin() -> Point {
+        Self::ORIGIN
+    }
+}
+
+pub fn structs() -> i32 {
+    let mut p = Point::new(1, 2);
+    p.shift(3);
+    let q = Point { y: 10, ..Point::origin() };
+    let r = &p;
+    let m = Meters(2.0);
+    let _ = (Marker, m.0);
+    let _ = (Direction::North, Direction::Toward(1, 2), Direction::Away { distance: 3 });
+    let (a, b) = q.into_pair();
+    let Point { x, y: _ } = p;
+    r.sum() + a + b + x
+}
+
+// References and assignment through them.
+pub fn references(x: &mut i32, y: &i32) -> i32 {
+    *x += *y;
+    let z = &mut *x;
+    *z = 4;
+    let w = &&5;
+    **w + *y
+}
+
+// Generic bodies, where parameters are opaque types.
+pub fn identity<T>(value: T) -> T {
+    value
+}
+
+pub fn pair<T>(a: T, b: T) -> (T, T) {
+    (a, b)
+}
+
+// Constants, statics and function pointers.
+pub const N: usize = 3;
+pub const M: usize = N * 2;
+pub static TABLE: [u8; 3] = [1, 2, 3];
+
+pub fn apply(f: fn(i32) -> i32, value: i32) -> i32 {
+    f(value)
+}
+
+pub trait Describe {
+    fn describe(&self) -> &'static str {
+        "something"
+    }
+}

@@ -19,5 +19,6 @@ bluing-base = { path = "crates/bluing-base" }
 bluing-hir = { path = "crates/bluing-hir" }
 bluing-std = { path = "crates/bluing-std" }
 bluing-ty = { path = "crates/bluing-ty" }
+bluing-typeck = { path = "crates/bluing-typeck" }
 ena = "0.14.4"
 rustc-hash = "2.1.3"

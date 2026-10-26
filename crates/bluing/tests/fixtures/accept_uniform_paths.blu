@@ -4,7 +4,8 @@ use Option::Some as Just;
 use u8 as Byte;
 
 pub fn f(x: Byte) -> Option<Byte> {
-    Just(x)
+    let _ = x;
+    loop {}
 }
 
 // A local `std` module shadows the extern crate.

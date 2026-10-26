@@ -1,0 +1,27 @@
+// bluing: operator, operator, operator, operator, operator, operator, operator, operator
+// rustc: error
+pub fn bool_add() {
+    let _ = true + true;
+}
+pub fn float_bits() {
+    let _ = 1.0 & 2.0;
+}
+pub fn negate_unsigned() {
+    let _ = -1u8;
+}
+pub fn deref_integer() {
+    let x = 5;
+    let _ = *x;
+}
+pub fn index_integer() {
+    let _ = 1[0];
+}
+pub fn int_plus_float() {
+    let _ = 1 + 1.0;
+}
+pub fn minus_bool(x: u32) {
+    let _ = x - true;
+}
+pub fn not_float() {
+    let _ = !1.5;
+}

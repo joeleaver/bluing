@@ -1,0 +1,29 @@
+// bluing: arg-count, type-mismatch, arg-count, arg-count, unresolved, unresolved
+// rustc: error
+fn two(a: i32, b: i32) -> i32 {
+    a + b
+}
+pub fn too_few() {
+    two(1);
+}
+pub fn not_a_function() {
+    let x = 1;
+    x();
+}
+pub struct T(i32);
+pub fn constructor() {
+    let _ = T(1, 2);
+}
+pub struct S;
+impl S {
+    fn m(&self, _x: u8) {}
+}
+pub fn method_args() {
+    S.m();
+}
+pub fn no_method() {
+    S.missing();
+}
+pub fn no_function() {
+    S::nope();
+}

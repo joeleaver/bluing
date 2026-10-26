@@ -132,3 +132,22 @@ impl TyFolder for Subst<'_> {
 pub fn subst(interner: &mut Interner, ty: Ty, substs: Substs) -> Ty {
     Subst::new(interner, substs).fold_ty(ty)
 }
+
+/// Replaces every lifetime with [`Region::Erased`]: the view of signature
+/// types inside bodies, where lifetimes are left for borrow checking.
+pub struct EraseRegions<'a>(pub &'a mut Interner);
+
+impl TyFolder for EraseRegions<'_> {
+    fn interner(&mut self) -> &mut Interner {
+        self.0
+    }
+
+    fn fold_region(&mut self, _: Region) -> Region {
+        Region::Erased
+    }
+}
+
+/// `ty` with every lifetime erased.
+pub fn erase_regions(interner: &mut Interner, ty: Ty) -> Ty {
+    EraseRegions(interner).fold_ty(ty)
+}

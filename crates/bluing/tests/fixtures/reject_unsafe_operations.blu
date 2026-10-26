@@ -1,0 +1,20 @@
+// bluing: requires-unsafe, requires-unsafe, requires-unsafe, requires-unsafe, denied-lint
+// rustc: error
+// options: allow-unsafe
+static mut COUNTER: u64 = 0;
+pub fn write() {
+    COUNTER += 1;
+}
+pub fn read() -> u64 {
+    COUNTER
+}
+pub fn raw(p: *const u8) -> u8 {
+    *p
+}
+unsafe fn helper() {}
+pub fn call() {
+    helper();
+}
+pub fn reference() -> &'static u64 {
+    unsafe { &COUNTER }
+}
