@@ -1,0 +1,17 @@
+// bluing: unresolved, unresolved, wrong-kind, unresolved, unresolved
+// rustc: error
+pub struct Named {
+    pub x: i32,
+}
+pub fn f() {
+    let a = b;
+    let c = c;
+    let d = Named;
+    {
+        let inner = 1;
+    }
+    let e = inner;
+}
+pub fn g() {
+    let _ = self;
+}

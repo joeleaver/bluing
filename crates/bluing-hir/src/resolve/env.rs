@@ -1,15 +1,23 @@
-//! Looking names up in modules and in lexical scope.
+//! A read-only view of the module system for looking names up.
 //!
 //! While imports are still being resolved, a lookup may be *undetermined*:
 //! the module still has an import that could bind the name, so the answer
 //! might change. Callers pass `force` once no import can make progress, which
-//! turns undetermined into not found.
+//! turns undetermined into not found. Once resolution has finished
+//! ([`NameEnv::finished`]) every lookup is determined.
 
-use super::{Binding, Namespace, PrimTy, Res, Resolver};
-use crate::hir::ImportKind;
-use crate::{DefId, ModuleId, Name};
+use std::collections::BTreeMap;
 
-pub(super) enum Lookup<T> {
+use la_arena::ArenaMap;
+
+use super::imports::{GlobLink, GlobSource};
+use super::{
+    Binding, BindingSource, ModuleScope, Namespace, PrimTy, Res, Resolutions, ScopeDef, Visibility,
+};
+use crate::hir::{Fields, Hir, ImportKind};
+use crate::{CrateGraph, CrateId, DefId, EnumId, ImportId, ModuleId, Name};
+
+pub(crate) enum Lookup<T> {
     Found(T),
     /// More than one definition, and nothing to prefer one.
     Ambiguous,
@@ -17,16 +25,65 @@ pub(super) enum Lookup<T> {
     Undetermined,
 }
 
-impl Resolver<'_> {
+pub(crate) struct NameEnv<'a> {
+    pub hir: &'a Hir,
+    pub graph: &'a CrateGraph,
+    pub crate_roots: &'a ArenaMap<CrateId, ModuleId>,
+    pub scopes: &'a ArenaMap<ModuleId, ModuleScope>,
+    pub preludes: &'a ArenaMap<CrateId, ModuleId>,
+    pub def_visibilities: &'a BTreeMap<DefId, Visibility>,
+    /// `None` once import resolution has finished.
+    pub progress: Option<ImportProgress<'a>>,
+}
+
+/// The state of import resolution, which decides whether a lookup is
+/// determined yet.
+#[derive(Clone, Copy)]
+pub(crate) struct ImportProgress<'a> {
+    /// Imports not resolved yet.
+    pub pending: &'a [ImportId],
+    /// The import being resolved, which cannot bind itself.
+    pub resolving: Option<ImportId>,
+    pub glob_links: &'a [GlobLink],
+}
+
+impl<'a> NameEnv<'a> {
+    /// The environment after name resolution has finished.
+    pub fn finished(hir: &'a Hir, graph: &'a CrateGraph, resolutions: &'a Resolutions) -> Self {
+        NameEnv {
+            hir,
+            graph,
+            crate_roots: &resolutions.crate_roots,
+            scopes: &resolutions.scopes,
+            preludes: &resolutions.preludes,
+            def_visibilities: &resolutions.def_visibilities,
+            progress: None,
+        }
+    }
+
+    pub fn crate_of(&self, module: ModuleId) -> CrateId {
+        self.hir.modules[module].krate
+    }
+
+    /// The root of the crate called `name` that `module`'s crate depends on.
+    pub fn extern_crate(&self, module: ModuleId, name: &Name) -> Option<ModuleId> {
+        let krate = self.crate_of(module);
+        self.graph[krate]
+            .deps
+            .iter()
+            .find(|&&dep| &self.graph[dep].name == name)
+            .and_then(|&dep| self.crate_roots.get(dep).copied())
+    }
+
     /// Looks `name` up in the scope of `module` (its items and imports).
-    pub(super) fn lookup_in_module(
+    pub fn lookup_in_module(
         &self,
         module: ModuleId,
         name: &Name,
         ns: Namespace,
         force: bool,
     ) -> Lookup<Binding> {
-        let bindings = self.out.scopes[module].get(ns, name);
+        let bindings = self.scopes[module].get(ns, name);
         if let Some(binding) = bindings.and_then(|b| b.explicit) {
             return Lookup::Found(binding);
         }
@@ -42,9 +99,9 @@ impl Resolver<'_> {
 
     /// Looks up the first segment of a path written in `module`, through the
     /// module's scope, the extern prelude, the standard prelude and the
-    /// primitive types. Generic parameters and `Self` are handled by the
-    /// caller, since only signatures can see them.
-    pub(super) fn lookup_lexical(
+    /// primitive types. Generic parameters, `Self` and local variables are
+    /// handled by the caller.
+    pub fn lookup_lexical(
         &self,
         module: ModuleId,
         name: &Name,
@@ -52,7 +109,7 @@ impl Resolver<'_> {
         force: bool,
         in_use_path: bool,
     ) -> Lookup<Res> {
-        let bindings = self.out.scopes[module].get(ns, name);
+        let bindings = self.scopes[module].get(ns, name);
         if let Some(binding) = bindings.and_then(|b| b.explicit) {
             return Lookup::Found(binding.def.res());
         }
@@ -110,12 +167,31 @@ impl Resolver<'_> {
         Lookup::NotFound
     }
 
+    /// A variant of `e` named `name` in namespace `ns`: every variant is in
+    /// the type namespace, tuple and unit variants are also in the value one.
+    pub fn variant_binding(&self, e: EnumId, name: &Name, ns: Namespace) -> Option<Binding> {
+        let variant = self.hir.enums[e]
+            .variants
+            .iter()
+            .copied()
+            .find(|&v| &self.hir.variants[v].name == name)?;
+        let is_value = !matches!(self.hir.variants[variant].fields, Fields::Record(_));
+        (ns == Namespace::Types || is_value).then(|| Binding {
+            def: ScopeDef::Def(DefId::Variant(variant)),
+            vis: self.def_visibilities[&DefId::Variant(variant)],
+            source: BindingSource::Item,
+        })
+    }
+
     /// Whether `module` has an unresolved single import that binds `name`.
     /// The import being resolved does not count: it cannot bind itself.
     fn has_pending_single(&self, module: ModuleId, name: &Name) -> bool {
-        self.pending.iter().any(|&id| {
+        let Some(progress) = self.progress else {
+            return false;
+        };
+        progress.pending.iter().any(|&id| {
             let import = &self.hir.imports[id];
-            Some(id) != self.resolving
+            Some(id) != progress.resolving
                 && import.module == module
                 && matches!(&import.kind, ImportKind::Single { name: Some(n), .. } if n == name)
         })
@@ -124,23 +200,25 @@ impl Resolver<'_> {
     /// Whether no import can still add names to `module`: neither the module
     /// nor any module it glob-imports from (transitively) has unresolved
     /// imports (other than the one being resolved).
-    pub(super) fn is_settled(&self, module: ModuleId) -> bool {
+    fn is_settled(&self, module: ModuleId) -> bool {
+        let Some(progress) = self.progress else {
+            return true;
+        };
         let mut stack = vec![module];
         let mut seen = vec![module];
         while let Some(current) = stack.pop() {
-            let pending_here = self
-                .pending
-                .iter()
-                .any(|&id| Some(id) != self.resolving && self.hir.imports[id].module == current);
+            let pending_here = progress.pending.iter().any(|&id| {
+                Some(id) != progress.resolving && self.hir.imports[id].module == current
+            });
             if pending_here {
                 return false;
             }
-            for link in self
+            for link in progress
                 .glob_links
                 .iter()
                 .filter(|link| link.importing == current)
             {
-                if let super::imports::GlobSource::Module(source) = link.source
+                if let GlobSource::Module(source) = link.source
                     && !seen.contains(&source)
                 {
                     seen.push(source);

@@ -2,7 +2,6 @@
 // rustc: ok
 pub fn local_items() {
     struct Local;
-    let _ = Local;
 }
 
 #[cfg(test)]

@@ -44,10 +44,13 @@ pub enum Code {
     /// An invalid visibility: `pub(in path)` naming a non-ancestor, a
     /// qualifier where none is allowed, or a re-export wider than its item.
     Visibility,
+    /// Misplaced control flow: `break` or `continue` outside a loop, `break`
+    /// with a value out of `while`, `return` outside a function, ...
+    Control,
 }
 
 impl Code {
-    pub const ALL: [Code; 16] = [
+    pub const ALL: [Code; 17] = [
         Code::Syntax,
         Code::Unsafe,
         Code::Ffi,
@@ -64,6 +67,7 @@ impl Code {
         Code::WrongKind,
         Code::UndeclaredLifetime,
         Code::Visibility,
+        Code::Control,
     ];
 
     /// The code whose [`Code::as_str`] is `name`.
@@ -90,6 +94,7 @@ impl Code {
             Code::WrongKind => "wrong-kind",
             Code::UndeclaredLifetime => "undeclared-lifetime",
             Code::Visibility => "visibility",
+            Code::Control => "control",
         }
     }
 }
@@ -145,6 +150,7 @@ mod tests {
             Code::WrongKind => 13,
             Code::UndeclaredLifetime => 14,
             Code::Visibility => 15,
+            Code::Control => 16,
         }
     }
 

@@ -2,15 +2,15 @@
 
 use bluing_base::{Code, TextRange};
 
-use super::lookup::Lookup;
+use super::env::Lookup;
 use super::{Binding, BindingSource, Namespace, Res, Resolver, ScopeDef, Visibility};
-use crate::hir::{Fields, Import, ImportKind, ModPath, PathKind};
+use crate::hir::{Import, ImportKind, ModPath, PathKind};
 use crate::{DefId, EnumId, ImportId, ModuleId, Name};
 
 /// A resolved glob import: everything visible in `source` is imported into
 /// `importing`, at most as visible as `vis`.
 #[derive(Clone, Copy, Debug)]
-pub(super) struct GlobLink {
+pub(crate) struct GlobLink {
     pub importing: ModuleId,
     pub source: GlobSource,
     pub import: ImportId,
@@ -18,7 +18,7 @@ pub(super) struct GlobLink {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum GlobSource {
+pub(crate) enum GlobSource {
     Module(ModuleId),
     Enum(EnumId),
 }
@@ -128,7 +128,10 @@ impl Resolver<'_> {
         if path.segments.len() == 1 && path.kind == PathKind::Plain {
             // `use name;`: the name itself is looked up lexically.
             for &ns in namespaces {
-                match self.lookup_lexical(import.module, target, ns, force, true) {
+                match self
+                    .env()
+                    .lookup_lexical(import.module, target, ns, force, true)
+                {
                     Lookup::Found(Res::Def(def)) => found.push((ns, self.item_binding(def))),
                     Lookup::Found(Res::PrimTy(prim)) => found.push((
                         ns,
@@ -192,13 +195,13 @@ impl Resolver<'_> {
         force: bool,
     ) -> Step<Option<Binding>> {
         match container {
-            DefId::Module(module) => match self.lookup_in_module(module, name, ns, force) {
+            DefId::Module(module) => match self.env().lookup_in_module(module, name, ns, force) {
                 Lookup::Found(binding) => Step::Found(Some(binding)),
                 Lookup::NotFound => Step::Found(None),
                 Lookup::Undetermined => Step::Undetermined,
                 Lookup::Ambiguous => self.ambiguous(import.file, range, name),
             },
-            DefId::Enum(e) => Step::Found(self.variant_binding(e, name, ns)),
+            DefId::Enum(e) => Step::Found(self.env().variant_binding(e, name, ns)),
             other => self.not_a_container(import, other, range),
         }
     }
@@ -223,7 +226,7 @@ impl Resolver<'_> {
             }
             PathKind::Global => {
                 let (name, range) = &path.segments[0];
-                match self.extern_crate(module, name) {
+                match self.env().extern_crate(module, name) {
                     Some(root) => (DefId::Module(root), 1),
                     None => {
                         let message = format!("there is no crate named `{name}`");
@@ -235,7 +238,10 @@ impl Resolver<'_> {
             PathKind::Plain if upto == 0 => (DefId::Module(module), 0),
             PathKind::Plain => {
                 let (name, range) = &path.segments[0];
-                match self.lookup_lexical(module, name, Namespace::Types, force, true) {
+                match self
+                    .env()
+                    .lookup_lexical(module, name, Namespace::Types, force, true)
+                {
                     Lookup::Found(Res::Def(def)) => (def, 1),
                     Lookup::Found(_) => {
                         let message = format!("`{name}` is a primitive type, not a module");
@@ -254,17 +260,22 @@ impl Resolver<'_> {
         };
         for (name, range) in path.segments.iter().take(upto).skip(first) {
             let binding = match current {
-                DefId::Module(m) => match self.lookup_in_module(m, name, Namespace::Types, force) {
-                    Lookup::Found(binding) => binding,
-                    Lookup::NotFound => {
-                        let message = format!("unresolved import: no `{name}` in this module");
-                        self.error(import.file, *range, Code::Unresolved, message);
-                        return Step::Failed;
+                DefId::Module(m) => {
+                    match self
+                        .env()
+                        .lookup_in_module(m, name, Namespace::Types, force)
+                    {
+                        Lookup::Found(binding) => binding,
+                        Lookup::NotFound => {
+                            let message = format!("unresolved import: no `{name}` in this module");
+                            self.error(import.file, *range, Code::Unresolved, message);
+                            return Step::Failed;
+                        }
+                        Lookup::Ambiguous => return self.ambiguous(import.file, *range, name),
+                        Lookup::Undetermined => return Step::Undetermined,
                     }
-                    Lookup::Ambiguous => return self.ambiguous(import.file, *range, name),
-                    Lookup::Undetermined => return Step::Undetermined,
-                },
-                DefId::Enum(e) => match self.variant_binding(e, name, Namespace::Types) {
+                }
+                DefId::Enum(e) => match self.env().variant_binding(e, name, Namespace::Types) {
                     Some(binding) => binding,
                     None => {
                         let message = format!("no variant `{name}` in this enum");
@@ -328,22 +339,6 @@ impl Resolver<'_> {
             vis,
             source: BindingSource::Item,
         }
-    }
-
-    /// A variant of `e` named `name` in namespace `ns`: every variant is in
-    /// the type namespace, tuple and unit variants are also in the value one.
-    pub(super) fn variant_binding(&self, e: EnumId, name: &Name, ns: Namespace) -> Option<Binding> {
-        let variant = self.hir.enums[e]
-            .variants
-            .iter()
-            .copied()
-            .find(|&v| &self.hir.variants[v].name == name)?;
-        let is_value = !matches!(self.hir.variants[variant].fields, Fields::Record(_));
-        (ns == Namespace::Types || is_value).then(|| Binding {
-            def: ScopeDef::Def(DefId::Variant(variant)),
-            vis: self.out.def_visibilities[&DefId::Variant(variant)],
-            source: BindingSource::Item,
-        })
     }
 
     fn bind_import(&mut self, id: ImportId, name: Option<&Name>, found: Vec<(Namespace, Binding)>) {
@@ -440,7 +435,7 @@ impl Resolver<'_> {
                 for &variant in &self.hir.enums[e].variants {
                     let name = &self.hir.variants[variant].name;
                     for ns in Namespace::ALL {
-                        if let Some(binding) = self.variant_binding(e, name, ns) {
+                        if let Some(binding) = self.env().variant_binding(e, name, ns) {
                             entries.push((ns, name.clone(), binding));
                         }
                     }

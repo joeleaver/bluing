@@ -221,7 +221,7 @@ impl TypeLowerer<'_> {
         Some(self.generic_args(&list))
     }
 
-    fn generic_args(&mut self, list: &ast::GenericArgList) -> GenericArgs {
+    pub fn generic_args(&mut self, list: &ast::GenericArgList) -> GenericArgs {
         let mut args = Vec::new();
         let mut bindings = Vec::new();
         for arg in list.generic_args() {

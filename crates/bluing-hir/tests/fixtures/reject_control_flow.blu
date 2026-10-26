@@ -1,0 +1,23 @@
+// bluing: control, unresolved, control, control, control, control, control
+// rustc: error
+pub fn f() {
+    break;
+    loop {
+        continue 'nope;
+    }
+    'a: {
+        continue 'a;
+    }
+    loop {
+        'b: {
+            break;
+        }
+    }
+    while true {
+        break 1;
+    }
+    'c: {
+        break;
+    }
+}
+pub const C: i32 = return;

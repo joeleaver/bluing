@@ -1,14 +1,37 @@
 //! Resolves every signature: walks each item with the lexical scope (generic
 //! parameters and `Self`) its paths are written in.
 
-use super::types::LexScope;
-use super::{Resolver, SelfTyOf};
-use crate::hir::{Container, Fields, GenericParams, SelfParamKind};
+use super::types::{LexScope, TypeResolver};
+use super::{NameEnv, Resolver, SelfTyOf};
+use crate::hir::{Container, Fields, GenericParams, Hir, SelfParamKind};
 use crate::{FileId, GenericOwner, ModuleId};
 
-impl<'a> Resolver<'a> {
+impl Resolver<'_> {
     pub(super) fn resolve_signatures(&mut self) {
         let hir = self.hir;
+        let env = NameEnv {
+            hir,
+            graph: self.graph,
+            crate_roots: &self.out.crate_roots,
+            scopes: &self.out.scopes,
+            preludes: &self.out.preludes,
+            def_visibilities: &self.out.def_visibilities,
+            progress: None,
+        };
+        let mut types = TypeResolver {
+            env: &env,
+            diagnostics: &mut self.diagnostics,
+            paths: &mut self.out.paths,
+            lifetimes: &mut self.out.lifetimes,
+        };
+        types.resolve_items();
+    }
+}
+
+impl TypeResolver<'_, '_> {
+    /// Resolves the signature of every item.
+    fn resolve_items(&mut self) {
+        let hir = self.env.hir;
         for (id, s) in hir.structs.iter() {
             let scope = scope(
                 s.module,
@@ -59,7 +82,7 @@ impl<'a> Resolver<'a> {
             self.resolve_type(&scope, &imp.self_ty);
         }
         for (id, f) in hir.functions.iter() {
-            let mut scope = self.container_scope(f.container, f.loc.file);
+            let mut scope = container_scope(hir, f.container, f.loc.file);
             scope.generics.push((GenericOwner::Fn(id), &f.generics));
             self.resolve_generics(&scope, &f.generics);
             if let Some(self_param) = &f.self_param {
@@ -81,7 +104,7 @@ impl<'a> Resolver<'a> {
             }
         }
         for (id, alias) in hir.type_aliases.iter() {
-            let mut scope = self.container_scope(alias.container, alias.loc.file);
+            let mut scope = container_scope(hir, alias.container, alias.loc.file);
             scope
                 .generics
                 .push((GenericOwner::TypeAlias(id), &alias.generics));
@@ -94,7 +117,7 @@ impl<'a> Resolver<'a> {
             }
         }
         for (_, c) in hir.consts.iter() {
-            let scope = self.container_scope(c.container, c.loc.file);
+            let scope = container_scope(hir, c.container, c.loc.file);
             self.resolve_type(&scope, &c.ty);
         }
         for (_, s) in hir.statics.iter() {
@@ -110,36 +133,35 @@ impl<'a> Resolver<'a> {
             }
         }
     }
+}
 
-    /// The scope inside a module, trait or impl: an associated item sees its
-    /// container's generic parameters and `Self`.
-    fn container_scope(&self, container: Container, file: FileId) -> LexScope<'a> {
-        let hir = self.hir;
-        match container {
-            Container::Module(module) => scope(module, file, Vec::new(), None),
-            Container::Trait(id) => {
-                let t = &hir.traits[id];
-                scope(
-                    t.module,
-                    file,
-                    vec![(GenericOwner::Trait(id), &t.generics)],
-                    Some(SelfTyOf::Trait(id)),
-                )
-            }
-            Container::Impl(id) => {
-                let imp = &hir.impls[id];
-                scope(
-                    imp.module,
-                    file,
-                    vec![(GenericOwner::Impl(id), &imp.generics)],
-                    Some(SelfTyOf::Impl(id)),
-                )
-            }
+/// The scope inside a module, trait or impl: an associated item sees its
+/// container's generic parameters and `Self`.
+pub(crate) fn container_scope(hir: &Hir, container: Container, file: FileId) -> LexScope<'_> {
+    match container {
+        Container::Module(module) => scope(module, file, Vec::new(), None),
+        Container::Trait(id) => {
+            let t = &hir.traits[id];
+            scope(
+                t.module,
+                file,
+                vec![(GenericOwner::Trait(id), &t.generics)],
+                Some(SelfTyOf::Trait(id)),
+            )
+        }
+        Container::Impl(id) => {
+            let imp = &hir.impls[id];
+            scope(
+                imp.module,
+                file,
+                vec![(GenericOwner::Impl(id), &imp.generics)],
+                Some(SelfTyOf::Impl(id)),
+            )
         }
     }
 }
 
-fn scope<'h>(
+pub(crate) fn scope<'h>(
     module: ModuleId,
     file: FileId,
     generics: Vec<(GenericOwner, &'h GenericParams)>,

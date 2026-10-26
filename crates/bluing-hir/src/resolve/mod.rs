@@ -3,8 +3,9 @@
 //! "Name resolution".
 
 mod duplicates;
+mod env;
 mod imports;
-mod lookup;
+mod paths;
 mod res;
 mod scope;
 mod signatures;
@@ -14,6 +15,10 @@ mod visibility;
 pub use res::{LifetimeRes, PathRes, PrimTy, Res, SelfTyOf};
 pub use scope::{Binding, BindingSource, ModuleScope, NameBindings, Namespace, ScopeDef};
 pub use visibility::Visibility;
+
+pub(crate) use env::{Lookup, NameEnv};
+pub(crate) use signatures::{container_scope, scope};
+pub(crate) use types::{LexScope, TypeResolver};
 
 use std::collections::BTreeMap;
 
@@ -40,6 +45,8 @@ pub struct Resolutions {
     /// The visibility of every nameable definition and associated item.
     pub def_visibilities: BTreeMap<DefId, Visibility>,
     pub field_visibilities: BTreeMap<FieldOwner, Vec<Visibility>>,
+    /// The standard prelude module of each script crate.
+    pub preludes: ArenaMap<CrateId, ModuleId>,
     paths: Vec<Option<PathRes>>,
     lifetimes: Vec<Option<LifetimeRes>>,
 }
@@ -64,7 +71,6 @@ pub(crate) fn resolve(
     let mut resolver = Resolver {
         hir,
         graph,
-        preludes: ArenaMap::default(),
         import_vis: ArenaMap::default(),
         pending: hir.imports.iter().map(|(id, _)| id).collect(),
         resolving: None,
@@ -88,8 +94,6 @@ pub(crate) fn resolve(
 struct Resolver<'a> {
     hir: &'a Hir,
     graph: &'a CrateGraph,
-    /// The standard prelude module of each script crate.
-    preludes: ArenaMap<CrateId, ModuleId>,
     /// The resolved visibility of each import.
     import_vis: ArenaMap<ImportId, Visibility>,
     /// Imports not resolved yet, in source order.
@@ -107,8 +111,21 @@ impl Resolver<'_> {
             .push(Diagnostic::new(file, range, code, message));
     }
 
-    fn crate_of(&self, module: ModuleId) -> CrateId {
-        self.hir.modules[module].krate
+    /// The module system as it stands, for looking names up.
+    fn env(&self) -> NameEnv<'_> {
+        NameEnv {
+            hir: self.hir,
+            graph: self.graph,
+            crate_roots: &self.out.crate_roots,
+            scopes: &self.out.scopes,
+            preludes: &self.out.preludes,
+            def_visibilities: &self.out.def_visibilities,
+            progress: Some(env::ImportProgress {
+                pending: &self.pending,
+                resolving: self.resolving,
+                glob_links: &self.glob_links,
+            }),
+        }
     }
 
     /// Script crates get `std::prelude::rust_2024` as their prelude.
@@ -126,7 +143,7 @@ impl Resolver<'_> {
                 .and_then(|root| self.child_module(root, "prelude"))
                 .and_then(|prelude| self.child_module(prelude, "rust_2024"));
             if let Some(prelude) = prelude {
-                self.preludes.insert(krate, prelude);
+                self.out.preludes.insert(krate, prelude);
             }
         }
     }
@@ -137,16 +154,6 @@ impl Resolver<'_> {
             .iter()
             .copied()
             .find(|&child| self.hir.modules[child].name.as_ref().map(Name::as_str) == Some(name))
-    }
-
-    /// The crates `module`'s crate can name, by name.
-    fn extern_crate(&self, module: ModuleId, name: &Name) -> Option<ModuleId> {
-        let krate = self.crate_of(module);
-        self.graph[krate]
-            .deps
-            .iter()
-            .find(|&&dep| &self.graph[dep].name == name)
-            .and_then(|&dep| self.out.crate_roots.get(dep).copied())
     }
 
     fn resolve_vis(&mut self, module: ModuleId, raw: &RawVisibility, file: FileId) -> Visibility {

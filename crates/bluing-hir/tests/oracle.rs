@@ -54,15 +54,18 @@ fn fixtures_agree_with_bluing_and_rustc() {
             ));
         }
         match run_rustc(&name, &fixture) {
-            Ok(rustc_ok) if rustc_ok == fixture.rustc_ok => {}
-            Ok(rustc_ok) => failures.push(format!(
-                "{name}: rustc {}, but the fixture says it should {}",
-                if rustc_ok {
+            Ok(rustc) if rustc.ok == fixture.rustc_ok => {}
+            Ok(rustc) => failures.push(format!(
+                "{name}: rustc {}, but the fixture says it should {}{}",
+                if rustc.ok {
                     "accepted it"
                 } else {
                     "rejected it"
                 },
                 if fixture.rustc_ok { "accept" } else { "reject" },
+                rustc
+                    .first_error
+                    .map_or_else(String::new, |error| format!("\n  rustc: {error}")),
             )),
             Err(err) => failures.push(format!("{name}: {err}")),
         }
@@ -70,9 +73,15 @@ fn fixtures_agree_with_bluing_and_rustc() {
     assert!(failures.is_empty(), "\n{}", failures.join("\n\n"));
 }
 
+struct RustcOutcome {
+    ok: bool,
+    /// The first `error` line rustc printed, if it rejected the crate.
+    first_error: Option<String>,
+}
+
 /// Compiles the fixture as a Rust library: the same files with `.rs` in
-/// place of `.blu`. Returns whether rustc accepted it.
-fn run_rustc(name: &str, fixture: &Fixture) -> Result<bool, String> {
+/// place of `.blu`.
+fn run_rustc(name: &str, fixture: &Fixture) -> Result<RustcOutcome, String> {
     let dir = std::env::temp_dir().join(format!("bluing-oracle-{}-{name}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     for (path, text) in &fixture.files {
@@ -100,5 +109,12 @@ fn run_rustc(name: &str, fixture: &Fixture) -> Result<bool, String> {
         .output()
         .map_err(|err| format!("could not run rustc (is it on PATH?): {err}"))?;
     let _ = fs::remove_dir_all(&dir);
-    Ok(output.status.success())
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Ok(RustcOutcome {
+        ok: output.status.success(),
+        first_error: stderr
+            .lines()
+            .find(|line| line.starts_with("error"))
+            .map(str::to_owned),
+    })
 }

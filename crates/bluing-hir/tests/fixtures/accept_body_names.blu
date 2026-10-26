@@ -1,0 +1,63 @@
+// bluing: ok
+// rustc: ok
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Point {
+    pub fn sum(&self) -> i32 {
+        self.x + self.y
+    }
+}
+
+fn helper() -> i32 {
+    1
+}
+
+pub fn shadowing(x: i32) -> i32 {
+    let x = x + 1;
+    let x = {
+        let y = x;
+        y * 2
+    };
+    let helper = helper();
+    x + helper
+}
+
+pub fn literals_and_structs() -> i32 {
+    let x = 3;
+    let p = Point { x, y: 4 };
+    let q = Point { y: 1, ..p };
+    let Point { x: px, y: _ } = q;
+    let (a, b) = (px, p.sum());
+    a + b
+}
+
+pub fn labels() -> i32 {
+    let mut total = 0;
+    'outer: loop {
+        loop {
+            total += 1;
+            if total > 3 {
+                break 'outer;
+            }
+            continue 'outer;
+        }
+    }
+    let found = 'search: {
+        if total == 4 {
+            break 'search 1;
+        }
+        0
+    };
+    while total > 0 {
+        total -= 1;
+    }
+    found
+}
+
+pub const LIMIT: i32 = 10;
+pub fn constant_paths() -> i32 {
+    crate::LIMIT + self::LIMIT + LIMIT
+}

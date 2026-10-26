@@ -258,6 +258,51 @@ Attributes follow an allowlist: inert attributes (`allow`, `warn`, `deny`,
 `repr(C)` / `repr(transparent)`. Anything else is an error, so an attribute is
 never silently ignored.
 
+## Milestone 3: type checking
+
+Milestone 3 is split into parts. Each part is complete for what it covers.
+From the first part on, function bodies are checked, and any construct in a
+body that the type checker does not handle yet is reported as "not supported
+yet" rather than accepted unchecked.
+
+- **3a: bodies and monomorphic types.**
+  - Function bodies and constant initializers are lowered to body HIR
+    (expressions, statements, patterns) with every name resolved: local
+    variables and their scopes, loop labels, and item paths in both
+    namespaces.
+  - Types get an interned representation. Signatures are lowered from HIR
+    types, with the checks that need them: generic argument counts, lifetime
+    elision, and where `impl Trait` and `_` may appear.
+  - Type inference for code that does not instantiate generic items:
+    literals (with integer and float literal inference and fallback), local
+    variables, `let` with or without annotations, blocks, `if`, `loop` and
+    `while` with labels, `break` (with values) and `continue`, `return`, calls
+    to functions and to tuple-struct and variant constructors, struct
+    literals, field access, tuples, arrays and indexing, references and
+    dereferencing, the arithmetic, comparison, logical and bitwise operators
+    on primitive types, assignment and compound assignment, inherent method
+    calls with automatic referencing and dereferencing, irrefutable binding
+    patterns in `let` and parameters (names, `_`, tuples, structs), and the
+    coercion of the never type `!` (from `return`, `break`, `loop {}`, ...)
+    to any type.
+- **3b: patterns and `match`.** All patterns, `match`, `if let`, `while let`,
+  `let ... else`, and exhaustiveness and refutability checking.
+- **3c: generics and traits.** Instantiating generic items with inference,
+  trait bounds and a trait solver, trait methods and associated items,
+  operator traits, `Copy`, `Clone`, `Sized`, and the built-in derives.
+- **3d: coercions, casts and constants.** Reborrowing, unsizing and deref
+  coercions, `as` casts, constant evaluation of array lengths, the
+  deny-by-default lints that make rustc reject a program (such as
+  `overflowing_literals`), and checks on `unsafe` operations.
+
+Macro calls in bodies (`println!`, `vec!`, `assert!`, ...) expand to calls
+into `std`, so they arrive with the standard library in milestone 6. Closures,
+`dyn Trait` and `impl Trait` values are milestone 7; `async` is milestone 8.
+
+Until milestone 5, programs that rustc rejects only because of moves, borrows
+or assignments to immutable variables are accepted: rustc checks those on MIR
+too, in its borrow checker.
+
 ## Testing
 
 - **The rustc oracle.** Each file in `crates/bluing-hir/tests/fixtures` is a
@@ -279,7 +324,7 @@ never silently ignored.
 2. **Name resolution and HIR.** *(done)* All items and their signatures, the
    module tree, imports and visibility, and the start of `std`. See
    "Milestone 2 scope".
-3. **Type checking** of non-generic code, then generics and traits.
+3. **Type checking**, in four parts; see "Milestone 3: type checking".
 4. **MIR and wasm codegen** for integer and struct code; first runnable
    scripts, verified against rustc.
 5. **Borrow checking**: moves and initialization, then regions and NLL.

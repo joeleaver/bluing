@@ -1,0 +1,14 @@
+// bluing: wrong-kind, wrong-kind, wrong-kind, wrong-kind, duplicate, wrong-kind
+// rustc: error
+pub struct T(i32);
+pub struct U;
+pub static S: i32 = 0;
+pub const C: i32 = 0;
+pub fn f() {
+    let T = 1;
+    let S = 2;
+    let mut C = 3;
+    let mut U = 4;
+    let (a, a) = (1, 2);
+}
+pub fn params(T: i32) {}
